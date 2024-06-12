@@ -57,8 +57,6 @@ jobs:
         id: test-action
         uses: ./
         with:
-          milliseconds: 1000
-
-      - name: Print Output
-        id: output
-        run: echo "${{ steps.test-action.outputs.time }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRAZE_REST_ENDPOINT: ${{ secrets.BRAZE_REST_ENDPOINT }}
+          BRAZE_API_KEY: ${{ secrets.BRAZE_API_KEY }}

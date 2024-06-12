@@ -14,19 +14,19 @@ const setOutputMock = jest.spyOn(core, 'setOutput').mockImplementation()
 const runMock = jest.spyOn(main, 'run')
 
 // Other utilities
-const timeRegex = /^\d{2}:\d{2}:\d{2}/
+// const timeRegex = /^\d{2}:\d{2}:\d{2}/
 
 describe('action', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('sets the time output', async () => {
+  it('sets the changed or added files', async () => {
     // Set the action's inputs as return values from core.getInput()
     getInputMock.mockImplementation(name => {
       switch (name) {
-        case 'milliseconds':
-          return '500'
+        case 'added-modified-files':
+          return JSON.stringify(['file1.html', 'file2.liquid'])
         default:
           return ''
       }
@@ -36,19 +36,12 @@ describe('action', () => {
     expect(runMock).toHaveReturned()
 
     // Verify that all of the core library functions were called correctly
-    expect(debugMock).toHaveBeenNthCalledWith(1, 'Waiting 500 milliseconds ...')
-    expect(debugMock).toHaveBeenNthCalledWith(
-      2,
-      expect.stringMatching(timeRegex)
-    )
-    expect(debugMock).toHaveBeenNthCalledWith(
-      3,
-      expect.stringMatching(timeRegex)
-    )
+    // expect(debugMock).toHaveBeenNthCalledWith(1, 'Waiting 500 milliseconds ...')
+    
     expect(setOutputMock).toHaveBeenNthCalledWith(
       1,
-      'time',
-      expect.stringMatching(timeRegex)
+      'braze-template-url',
+      expect.stringContaining('https://')
     )
   })
 
@@ -56,8 +49,8 @@ describe('action', () => {
     // Set the action's inputs as return values from core.getInput()
     getInputMock.mockImplementation(name => {
       switch (name) {
-        case 'milliseconds':
-          return 'this is not a number'
+        case 'added-modified-files':
+          return 'not a json string'
         default:
           return ''
       }
@@ -69,7 +62,7 @@ describe('action', () => {
     // Verify that all of the core library functions were called correctly
     expect(setFailedMock).toHaveBeenNthCalledWith(
       1,
-      'milliseconds not a number'
+      'added-modified-files not a json string'
     )
   })
 
@@ -77,8 +70,8 @@ describe('action', () => {
     // Set the action's inputs as return values from core.getInput()
     getInputMock.mockImplementation(name => {
       switch (name) {
-        case 'milliseconds':
-          throw new Error('Input required and not supplied: milliseconds')
+        case 'added-modified-files':
+          return ''
         default:
           return ''
       }
@@ -90,7 +83,7 @@ describe('action', () => {
     // Verify that all of the core library functions were called correctly
     expect(setFailedMock).toHaveBeenNthCalledWith(
       1,
-      'Input required and not supplied: milliseconds'
+      'Input required and not supplied: added-modified-files'
     )
   })
 })

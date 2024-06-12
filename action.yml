@@ -1,18 +1,18 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Braze Publish'
+description: 'Publish files to Braze as a content block'
+author: 'Adam Kazai'
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  GITHUB_TOKEN:
+    description: 'GitHub Token'
     required: true
-    default: '1000'
-
-# Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
+  BRAZE_REST_ENDPOINT:
+    description: 'Braze REST Endpoint'
+    required: true
+  BRAZE_API_KEY:
+    description: 'Braze API Key'
+    required: true
 
 runs:
   using: node20

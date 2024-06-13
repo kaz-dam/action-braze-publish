@@ -1,89 +1,132 @@
-/**
- * Unit tests for the action's main functionality, src/main.js
- */
 const core = require('@actions/core')
-const main = require('../src/main')
+const github = require('@actions/github')
+const BrazeApiClient = require('../src/brazeApi')
+const { run } = require('../src/main')
 
-// Mock the GitHub Actions core library
-const debugMock = jest.spyOn(core, 'debug').mockImplementation()
-const getInputMock = jest.spyOn(core, 'getInput').mockImplementation()
-const setFailedMock = jest.spyOn(core, 'setFailed').mockImplementation()
-const setOutputMock = jest.spyOn(core, 'setOutput').mockImplementation()
+jest.mock('@actions/core')
+jest.mock('@actions/github')
+jest.mock('../src/brazeApi')
 
-// Mock the action's main function
-const runMock = jest.spyOn(main, 'run')
+describe('run', () => {
+	let getInputMock, getOctokitMock, getContentMock, getCommitMock
 
-// Other utilities
-// const timeRegex = /^\d{2}:\d{2}:\d{2}/
+	beforeEach(() => {
+		getInputMock = jest.spyOn(core, 'getInput')
+		getOctokitMock = jest.spyOn(github, 'getOctokit')
+		getCommitMock = jest.fn()
+		getContentMock = jest.fn()
+		github.context = {
+			repo: {
+				owner: 'owner',
+				repo: 'repo'
+			},
+			sha: 'sha123'
+		}
 
-describe('action', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
+		getInputMock.mockImplementation(name => {
+			switch (name) {
+				case 'GITHUB_TOKEN':
+					return 'mock-github-token'
+				case 'BRAZE_REST_ENDPOINT':
+					return 'mock-braze-rest-endpoint'
+				case 'BRAZE_API_KEY':
+					return 'mock-braze-api-key'
+			}
+		})
 
-  it('sets the changed or added files', async () => {
-    // Set the action's inputs as return values from core.getInput()
-    getInputMock.mockImplementation(name => {
-      switch (name) {
-        case 'added-modified-files':
-          return JSON.stringify(['file1.html', 'file2.liquid'])
-        default:
-          return ''
-      }
-    })
+		getOctokitMock.mockReturnValue({
+			rest: {
+				repos: {
+					getCommit: getCommitMock,
+					getContent: getContentMock
+				}
+			}
+		})
 
-    await main.run()
-    expect(runMock).toHaveReturned()
+		BrazeApiClient.mockImplementation(() => {
+			return {
+				getContentBlocks: jest.fn().mockReturnValue(['existing-block']),
+				updateContentBlock: jest
+					.fn()
+					.mockResolvedValue({ liquid_tag: 'updated-tag' }),
+				createContentBlock: jest
+					.fn()
+					.mockResolvedValue({ liquid_tag: 'created-tag' })
+			}
+		})
+	})
 
-    // Verify that all of the core library functions were called correctly
-    // expect(debugMock).toHaveBeenNthCalledWith(1, 'Waiting 500 milliseconds ...')
-    
-    expect(setOutputMock).toHaveBeenNthCalledWith(
-      1,
-      'braze-template-url',
-      expect.stringContaining('https://')
-    )
-  })
+	afterEach(() => {
+		jest.resetAllMocks()
+	})
 
-  it('sets a failed status', async () => {
-    // Set the action's inputs as return values from core.getInput()
-    getInputMock.mockImplementation(name => {
-      switch (name) {
-        case 'added-modified-files':
-          return 'not a json string'
-        default:
-          return ''
-      }
-    })
+	it('should process modified files and update content blocks', async () => {
+		getCommitMock.mockResolvedValue({
+			data: {
+				files: [
+					{
+						filename: 'existing-block.liquid',
+						status: 'modified'
+					}
+				]
+			}
+		})
 
-    await main.run()
-    expect(runMock).toHaveReturned()
+		getContentMock.mockResolvedValue({
+			data: {
+				content: Buffer.from('new content').toString('base64')
+			}
+		})
 
-    // Verify that all of the core library functions were called correctly
-    expect(setFailedMock).toHaveBeenNthCalledWith(
-      1,
-      'added-modified-files not a json string'
-    )
-  })
+		await run()
 
-  it('fails if no input is provided', async () => {
-    // Set the action's inputs as return values from core.getInput()
-    getInputMock.mockImplementation(name => {
-      switch (name) {
-        case 'added-modified-files':
-          return ''
-        default:
-          return ''
-      }
-    })
+		expect(core.debug).toHaveBeenCalledWith('File: existing-block.liquid')
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block exists: existing-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block updated: updated-tag'
+		)
+	})
 
-    await main.run()
-    expect(runMock).toHaveReturned()
+	it('should process added files and create new content blocks', async () => {
+		getCommitMock.mockResolvedValue({
+			data: {
+				files: [
+					{
+						filename: 'new-block.liquid',
+						status: 'added'
+					}
+				]
+			}
+		})
 
-    // Verify that all of the core library functions were called correctly
-    expect(setFailedMock).toHaveBeenNthCalledWith(
-      1,
-      'Input required and not supplied: added-modified-files'
-    )
-  })
+		getContentMock.mockResolvedValue({
+			data: {
+				content: Buffer.from('new content').toString('base64')
+			}
+		})
+
+		await run()
+
+		expect(core.debug).toHaveBeenCalledWith('File: new-block.liquid')
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block does not exist: new-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Creating content block: new-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block created: created-tag'
+		)
+	})
+
+	it('should handle errors gracefully', async () => {
+		const errorMessage = 'Something went wrong'
+		getCommitMock.mockRejectedValue(new Error(errorMessage))
+
+		await run()
+
+		expect(core.setFailed).toHaveBeenCalledWith(errorMessage)
+	})
 })

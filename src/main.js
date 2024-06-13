@@ -38,6 +38,7 @@ async function run() {
 
     const files = response.data.files
 
+    // loop through the files and update the content blocks
     for (const file of files) {
       if (file.status === 'added' || file.status === 'modified') {
         core.debug(`File: ${file.filename}`)
@@ -50,10 +51,15 @@ async function run() {
         })
 
         const content = Buffer.from(contentResponse.data.content, 'base64').toString('utf8')
-
-        // TODO: check if content block exists from checking if the file name is in the list of content block names
-        // TODO: create content block if it doesn't exist
-        // TODO: update content block if it does exist
+        
+        const contentBlockName = file.filename.split('.').slice(0, -1).join('.')
+        
+        if (contentBlockNames.includes(contentBlockName)) {
+          core.debug(`Content block exists: ${contentBlockName}`)
+        } else {
+          core.debug(`Content block does not exist: ${contentBlockName}`)
+          core.debug(`Creating content block: ${contentBlockName}`)
+        }
 
         const postData = JSON.stringify({
           content_block_id: '12345678-1234-1234-1234-123456789012',

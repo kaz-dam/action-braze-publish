@@ -2,10 +2,10 @@ const core = require('@actions/core')
 const { HttpClient } = require('@actions/http-client')
 
 class BrazeApiClient {
-    constructor() {
+    constructor(apiKey, restEndpoint) {
         this.httpClient = new HttpClient()
-        this.brazeApiKey = core.getInput('BRAZE_API_KEY')
-        this.brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
+        this.brazeApiKey = apiKey
+        this.brazeRestEndpoint = restEndpoint
         this.requestHeaders = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.brazeApiKey}`

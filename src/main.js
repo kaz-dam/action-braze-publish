@@ -19,6 +19,17 @@ async function run() {
     const repo = context.repo.repo
     const sha = context.sha
 
+    // get list of existing content blocks from Braze
+    const contentBlocksResponse = await httpClient.get(`${brazeRestEndpoint}/content_blocks/list`, {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${brazeApiKey}`
+    })
+
+    const contentBlocksData = await contentBlocksResponse.readBody()
+    const contentBlocksJson = JSON.parse(contentBlocksData)
+    const contentBlockNames = contentBlocksJson.content_blocks.map(contentBlock => contentBlock.name)
+
+    // get the changed files from the commit
     const response = await octokit.rest.repos.getCommit({
       owner,
       repo,
@@ -40,8 +51,7 @@ async function run() {
 
         const content = Buffer.from(contentResponse.data.content, 'base64').toString('utf8')
 
-        // TODO: get list of existing content blocks
-        // TODO: check if content block exists
+        // TODO: check if content block exists from checking if the file name is in the list of content block names
         // TODO: create content block if it doesn't exist
         // TODO: update content block if it does exist
 

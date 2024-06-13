@@ -42,7 +42,7 @@ class BrazeApiClient {
 
             return json
         } catch (error) {
-            throw new Error(`Failed to send data to API: ${apiResponse.message.statusCode}`);
+            throw new Error(`Failed to send data to API: ${error.message.statusCode}`);
         }
     }
 
@@ -63,7 +63,7 @@ class BrazeApiClient {
             
             return json
         } catch (error) {
-            throw new Error(`Failed to send data to API: ${apiResponse.message.statusCode}`);
+            throw new Error(`Failed to send data to API: ${error.message.statusCode}`);
         }
     }
 

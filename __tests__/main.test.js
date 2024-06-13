@@ -121,6 +121,23 @@ describe('run', () => {
 		)
 	})
 
+	it('should ignore unmodified files', async () => {
+		getCommitMock.mockResolvedValue({
+			data: {
+				files: [
+					{
+						filename: 'existing-block.liquid',
+						status: 'removed'
+					}
+				]
+			}
+		})
+
+		await run()
+
+		expect(core.debug).not.toHaveBeenCalled()
+	})
+
 	it('should handle errors gracefully', async () => {
 		const errorMessage = 'Something went wrong'
 		getCommitMock.mockRejectedValue(new Error(errorMessage))

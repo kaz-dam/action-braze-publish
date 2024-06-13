@@ -9,11 +9,11 @@ const { HttpClient } = require('@actions/http-client')
 async function run() {
   try {
     const token = core.getInput('GITHUB_TOKEN')
-    const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
-    const brazeApiKey = core.getInput('BRAZE_API_KEY')
+    // const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
+    // const brazeApiKey = core.getInput('BRAZE_API_KEY')
     const octokit = github.getOctokit(token)
     const context = github.context
-    const httpClient = new HttpClient()
+    // const httpClient = new HttpClient()
 
     const owner = context.repo.owner
     const repo = context.repo.repo
@@ -25,8 +25,8 @@ async function run() {
       'Authorization': `Bearer ${brazeApiKey}`
     })
 
-    const contentBlocksData = await contentBlocksResponse.readBody()
-    const contentBlocksJson = JSON.parse(contentBlocksData)
+    // const contentBlocksData = await contentBlocksResponse.readBody()
+    // const contentBlocksJson = JSON.parse(contentBlocksData)
     const contentBlockNames = contentBlocksJson.content_blocks.map(contentBlock => contentBlock.name)
 
     // get the changed files from the commit
@@ -56,9 +56,19 @@ async function run() {
         
         if (contentBlockNames.includes(contentBlockName)) {
           core.debug(`Content block exists: ${contentBlockName}`)
+
+          const postData = JSON.stringify({
+            content_block_id: '12345678-1234-1234-1234-123456789012',
+            content
+          });
         } else {
           core.debug(`Content block does not exist: ${contentBlockName}`)
           core.debug(`Creating content block: ${contentBlockName}`)
+
+          const postData = JSON.stringify({
+            name: contentBlockName,
+            content
+          });
         }
 
         const postData = JSON.stringify({

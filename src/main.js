@@ -44,24 +44,44 @@ async function run() {
 					ref: sha
 				})
 
-				const content = Buffer.from(contentResponse.data.content, 'base64').toString('utf8')
-				
-				const contentBlockName = file.filename.split('.').slice(0, -1).join('.')
-				
+				const content = Buffer.from(
+					contentResponse.data.content,
+					'base64'
+				).toString('utf8')
+
+				const contentBlockName = file.filename
+					.split('.')
+					.slice(0, -1)
+					.join('.')
+
 				// check if the content block exists and update or create it
 				if (contentBlockNames.includes(contentBlockName)) {
 					core.debug(`Content block exists: ${contentBlockName}`)
 
-					const apiResponseJson = await brazeClient.updateContentBlock(contentBlockName, content)
-					
-					core.debug(`Content block updated: ${apiResponseJson.liquid_tag}`)
+					const apiResponseJson =
+						await brazeClient.updateContentBlock(
+							contentBlockName,
+							content
+						)
+
+					core.debug(
+						`Content block updated: ${apiResponseJson.liquid_tag}`
+					)
 				} else {
-					core.debug(`Content block does not exist: ${contentBlockName}`)
+					core.debug(
+						`Content block does not exist: ${contentBlockName}`
+					)
 					core.debug(`Creating content block: ${contentBlockName}`)
 
-					const apiResponseJson = await brazeClient.createContentBlock(contentBlockName, content)
-					
-					core.debug(`Content block created: ${apiResponseJson.liquid_tag}`)
+					const apiResponseJson =
+						await brazeClient.createContentBlock(
+							contentBlockName,
+							content
+						)
+
+					core.debug(
+						`Content block created: ${apiResponseJson.liquid_tag}`
+					)
 				}
 			}
 		}
@@ -71,5 +91,5 @@ async function run() {
 }
 
 module.exports = {
-  	run
+	run
 }

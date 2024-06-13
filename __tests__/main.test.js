@@ -8,7 +8,10 @@ jest.mock('@actions/github')
 jest.mock('../src/brazeApi')
 
 describe('run', () => {
-	let getInputMock, getOctokitMock, getContentMock, getCommitMock
+	let getInputMock
+	let getOctokitMock
+	let getContentMock
+	let getCommitMock
 
 	beforeEach(() => {
 		getInputMock = jest.spyOn(core, 'getInput')

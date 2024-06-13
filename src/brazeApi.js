@@ -2,77 +2,83 @@ const core = require('@actions/core')
 const { HttpClient } = require('@actions/http-client')
 
 class BrazeApiClient {
-    constructor(apiKey, restEndpoint) {
-        this.httpClient = new HttpClient()
-        this.brazeApiKey = apiKey
-        this.brazeRestEndpoint = restEndpoint
-        this.requestHeaders = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.brazeApiKey}`
-        }
-    }
+	constructor(apiKey, restEndpoint) {
+		this.httpClient = new HttpClient()
+		this.brazeApiKey = apiKey
+		this.brazeRestEndpoint = restEndpoint
+		this.requestHeaders = {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${this.brazeApiKey}`
+		}
+	}
 
-    async getContentBlocks() {
-        const contentBlocksResponse = await this.httpClient.get(
-            `${this.brazeRestEndpoint}/content_blocks/list`, 
-            this.requestHeaders
-        )
+	async getContentBlocks() {
+		const contentBlocksResponse = await this.httpClient.get(
+			`${this.brazeRestEndpoint}/content_blocks/list`,
+			this.requestHeaders
+		)
 
-        const contentBlocksData = await contentBlocksResponse.readBody()
-        const contentBlocksJson = JSON.parse(contentBlocksData)
-        const contentBlockNames = contentBlocksJson.content_blocks.map(contentBlock => contentBlock.name)
+		const contentBlocksData = await contentBlocksResponse.readBody()
+		const contentBlocksJson = JSON.parse(contentBlocksData)
+		const contentBlockNames = contentBlocksJson.content_blocks.map(
+			contentBlock => contentBlock.name
+		)
 
-        return contentBlockNames
-    }
+		return contentBlockNames
+	}
 
-    async createContentBlock(contentBlockName, contentBlockContent) {
-        const postData = JSON.stringify({
-            name: contentBlockName,
-            content: contentBlockContent
-        });
+	async createContentBlock(contentBlockName, contentBlockContent) {
+		const postData = JSON.stringify({
+			name: contentBlockName,
+			content: contentBlockContent
+		})
 
-        try {
-            const apiResponse = await this.httpClient.post(
-                `${this.brazeRestEndpoint}/content_blocks/create`, 
-                postData, 
-                this.requestHeaders
-            )
-            
-            const json = await this.parseResponse(apiResponse)
+		try {
+			const apiResponse = await this.httpClient.post(
+				`${this.brazeRestEndpoint}/content_blocks/create`,
+				postData,
+				this.requestHeaders
+			)
 
-            return json
-        } catch (error) {
-            throw new Error(`Failed to send data to API: ${error.message.statusCode}`);
-        }
-    }
+			const json = await this.parseResponse(apiResponse)
 
-    async updateContentBlock(contentBlockId, contentBlockContent) {
-        const postData = JSON.stringify({
-            content_block_id: contentBlockId,
-            content: contentBlockContent
-        });
+			return json
+		} catch (error) {
+			throw new Error(
+				`Failed to send data to API: ${error.message.statusCode}`
+			)
+		}
+	}
 
-        try {
-            const apiResponse = await this.httpClient.post(
-                `${this.brazeRestEndpoint}/content_blocks/update`, 
-                postData, 
-                this.requestHeaders
-            )
+	async updateContentBlock(contentBlockId, contentBlockContent) {
+		const postData = JSON.stringify({
+			content_block_id: contentBlockId,
+			content: contentBlockContent
+		})
 
-            const json = await this.parseResponse(apiResponse)
-            
-            return json
-        } catch (error) {
-            throw new Error(`Failed to send data to API: ${error.message.statusCode}`);
-        }
-    }
+		try {
+			const apiResponse = await this.httpClient.post(
+				`${this.brazeRestEndpoint}/content_blocks/update`,
+				postData,
+				this.requestHeaders
+			)
 
-    async parseResponse(apiResponse) {
-        const apiResponseData = await apiResponse.readBody()
-        const apiResponseJson = JSON.parse(apiResponseData)
+			const json = await this.parseResponse(apiResponse)
 
-        return apiResponseJson
-    }
+			return json
+		} catch (error) {
+			throw new Error(
+				`Failed to send data to API: ${error.message.statusCode}`
+			)
+		}
+	}
+
+	async parseResponse(apiResponse) {
+		const apiResponseData = await apiResponse.readBody()
+		const apiResponseJson = JSON.parse(apiResponseData)
+
+		return apiResponseJson
+	}
 }
 
 module.exports = BrazeApiClient

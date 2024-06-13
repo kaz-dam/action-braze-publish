@@ -4,16 +4,16 @@ author: 'Adam Kazai'
 
 # Define your inputs here.
 inputs:
-  GITHUB_TOKEN:
-    description: 'GitHub Token'
-    required: true
-  BRAZE_REST_ENDPOINT:
-    description: 'Braze REST Endpoint'
-    required: true
-  BRAZE_API_KEY:
-    description: 'Braze API Key'
-    required: true
+    GITHUB_TOKEN:
+        description: 'GitHub Token'
+        required: true
+    BRAZE_REST_ENDPOINT:
+        description: 'Braze REST Endpoint'
+        required: true
+    BRAZE_API_KEY:
+        description: 'Braze API Key'
+        required: true
 
 runs:
-  using: node20
-  main: dist/index.js
+    using: node20
+    main: dist/index.js

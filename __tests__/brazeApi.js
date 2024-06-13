@@ -24,16 +24,11 @@ describe('BrazeApiClient', () => {
 
 	it('should get content blocks', async () => {
 		const mockResponse = {
-			readBody: jest
-				.fn()
-				.mockResolvedValue(
-					JSON.stringify({
-                        content_blocks: [
-                            { name: 'block1' },
-                            { name: 'block2' }
-                        ]
-                    })
-				)
+			readBody: jest.fn().mockResolvedValue(
+				JSON.stringify({
+					content_blocks: [{ name: 'block1' }, { name: 'block2' }]
+				})
+			)
 		}
 		httpClientMock.get.mockResolvedValue(mockResponse)
 
@@ -43,7 +38,7 @@ describe('BrazeApiClient', () => {
 			`${apiUrl}/content_blocks/list`,
 			{
 				Authorization: `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
+				'Content-Type': 'application/json'
 			}
 		)
 		expect(result).toEqual(['block1', 'block2'])
@@ -66,7 +61,10 @@ describe('BrazeApiClient', () => {
 
 		expect(httpClientMock.post).toHaveBeenCalledWith(
 			`${apiUrl}/content_blocks/update`,
-			JSON.stringify({ content_block_id: 'block1', content: 'new content' }),
+			JSON.stringify({
+				content_block_id: 'block1',
+				content: 'new content'
+			}),
 			{
 				Authorization: `Bearer ${apiKey}`,
 				'Content-Type': 'application/json'
@@ -94,7 +92,7 @@ describe('BrazeApiClient', () => {
 			`${apiUrl}/content_blocks/create`,
 			JSON.stringify({
 				name: 'block1',
-                content: 'new content'
+				content: 'new content'
 			}),
 			{
 				Authorization: `Bearer ${apiKey}`,
@@ -104,16 +102,20 @@ describe('BrazeApiClient', () => {
 		expect(result).toEqual({ liquid_tag: 'created-tag' })
 	})
 
-    it('should throw an error when the API call fails', async () => {
-        const mockError = new Error('mock error')
-        httpClientMock.post.mockRejectedValue(mockError)
+	it('should throw an error when the API call fails', async () => {
+		const mockError = new Error('mock error')
+		httpClientMock.post.mockRejectedValue(mockError)
 
-        await expect(
-            brazeApiClient.createContentBlock('block1', 'new content')
-        ).rejects.toThrow(`Failed to send data to API: ${mockError.message.statusCode}`)
+		await expect(
+			brazeApiClient.createContentBlock('block1', 'new content')
+		).rejects.toThrow(
+			`Failed to send data to API: ${mockError.message.statusCode}`
+		)
 
-        await expect(
-            brazeApiClient.updateContentBlock('block1', 'new content')
-        ).rejects.toThrow(`Failed to send data to API: ${mockError.message.statusCode}`)
-    })
+		await expect(
+			brazeApiClient.updateContentBlock('block1', 'new content')
+		).rejects.toThrow(
+			`Failed to send data to API: ${mockError.message.statusCode}`
+		)
+	})
 })

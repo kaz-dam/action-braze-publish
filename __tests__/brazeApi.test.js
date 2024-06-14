@@ -5,6 +5,7 @@ jest.mock('@actions/http-client')
 describe('BrazeApiClient', () => {
 	let httpClientMock
 	let brazeApiClient
+	// codeql [js/hardcoded-credentials]: this is a mock API key used for testing purposes
 	const apiKey = 'mock-api-key'
 	const apiUrl = 'mock-api-url'
 

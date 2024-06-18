@@ -36,12 +36,27 @@ async function run() {
 		for (const file of files) {
 			// only process added or modified files
 			if (file.status === 'added' || file.status === 'modified') {
-				core.debug(`File: ${file.filename}`)
+				const filePath = file.filename
+				const fileName = filePath.split('/').pop()
+				const fileExtension = filePath.split('.').pop()
+				const isContentBlock =
+					filePath
+						.split('/')
+						.slice(0, -1)
+						.filter(part => part === 'content_blocks').length > 0 ||
+					fileExtension === 'liquid'
+
+				core.debug(`File: ${filePath}`)
+
+				if (!isContentBlock) {
+					core.debug(`Skipping file: ${filePath}`)
+					continue
+				}
 
 				const contentResponse = await octokit.rest.repos.getContent({
 					owner,
 					repo,
-					path: file.filename,
+					path: filePath,
 					ref: sha
 				})
 
@@ -50,7 +65,7 @@ async function run() {
 					'base64'
 				).toString('utf8')
 
-				const contentBlockName = file.filename
+				const contentBlockName = fileName
 					.split('.')
 					.slice(0, -1)
 					.join('.')

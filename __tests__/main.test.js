@@ -124,6 +124,57 @@ describe('run', () => {
 		)
 	})
 
+	it('should ignore non-content block files', async () => {
+		getCommitMock.mockResolvedValue({
+			data: {
+				files: [
+					{
+						filename: 'some-other-file.txt',
+						status: 'added'
+					}
+				]
+			}
+		})
+
+		await run()
+
+		expect(core.debug).toHaveBeenCalledWith('File: some-other-file.txt')
+		expect(core.debug).toHaveBeenCalledWith(
+			'Skipping file: some-other-file.txt'
+		)
+	})
+
+	it('should process files in content_blocks directory', async () => {
+		getCommitMock.mockResolvedValue({
+			data: {
+				files: [
+					{
+						filename: 'content_blocks/some-block.liquid',
+						status: 'added'
+					}
+				]
+			}
+		})
+
+		getContentMock.mockResolvedValue({
+			data: {
+				content: Buffer.from('new content').toString('base64')
+			}
+		})
+
+		await run()
+
+		expect(core.debug).toHaveBeenCalledWith(
+			'File: content_blocks/some-block.liquid'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Creating content block: some-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block created: created-tag'
+		)
+	})
+
 	it('should ignore unmodified files', async () => {
 		getCommitMock.mockResolvedValue({
 			data: {

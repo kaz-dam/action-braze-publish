@@ -29217,6 +29217,8 @@ class BrazeApiClient {
 			contentBlock => contentBlock.name
 		)
 
+		core.debug(`Parsed content block response: ${contentBlocksJson}`)
+
 		return contentBlockNames
 	}
 
@@ -29305,6 +29307,7 @@ async function run() {
 
 		// get list of existing content blocks from Braze
 		const contentBlockNames = brazeClient.getContentBlocks()
+		core.debug(`Content blocks: ${contentBlockNames}`)
 
 		// get the changed files from the commit
 		const response = await octokit.rest.repos.getCommit({

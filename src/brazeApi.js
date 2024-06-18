@@ -24,7 +24,7 @@ class BrazeApiClient {
 			contentBlock => contentBlock.name
 		)
 
-        core.debug(`Parsed content block response: ${contentBlocksJson}`)
+		core.debug(`Parsed content block response: ${contentBlocksJson}`)
 
 		return contentBlockNames
 	}

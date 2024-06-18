@@ -138,7 +138,9 @@ describe('run', () => {
 
 		await run()
 
-		expect(core.debug).not.toHaveBeenCalled()
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content blocks: existing-block'
+		)
 	})
 
 	it('should handle errors gracefully', async () => {

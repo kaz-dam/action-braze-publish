@@ -30,7 +30,7 @@ There are no outputs yet.
 ```yaml
 uses: actions/action-braze-publish@v1
 with:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    BRAZE_REST_ENDPOINT: ${{ secrets.BRAZE_REST_ENDPOINT }}
-    BRAZE_API_KEY: ${{ secrets.BRAZE_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  BRAZE_REST_ENDPOINT: ${{ secrets.BRAZE_REST_ENDPOINT }}
+  BRAZE_API_KEY: ${{ secrets.BRAZE_API_KEY }}
 ```

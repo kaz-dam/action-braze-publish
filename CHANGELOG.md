@@ -1,4 +1,4 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](http://keepachangelog.com/) and this project
@@ -8,12 +8,12 @@ adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-- Fixed markdown formatting issues in `README.md` and `CHANGELOG.md` to comply
+- Fixed Markdown formatting issues in `README.md` and `CHANGELOG.md` to comply
   with linter rules.
 
 ### Updated
 
-- Improved overall readability and consistency of markdown files.
+- Improved overall readability and consistency of Markdown files.
 
 ## [1.0.0] - 2024-06-19
 

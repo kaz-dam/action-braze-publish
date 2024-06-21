@@ -1,8 +1,9 @@
 name: 'Braze Publish'
 description: 'Publish files to Braze as a content block'
 author: 'Adam Kazai'
-icon: 'upload'
-color: 'blue'
+branding:
+    icon: 'upload'
+    color: 'blue'
 
 # Define your inputs here.
 inputs:

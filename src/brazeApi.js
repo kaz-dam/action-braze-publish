@@ -20,8 +20,12 @@ class BrazeApiClient {
 
 		const contentBlocksData = await contentBlocksResponse.readBody()
 		const contentBlocksJson = JSON.parse(contentBlocksData)
-		const contentBlockNames = contentBlocksJson.content_blocks.map(
-			contentBlock => contentBlock.name
+		const contentBlockNames = contentBlocksJson.content_blocks.reduce(
+			(acc, contentBlock) => {
+				acc[contentBlock.name] = contentBlock.content_block_id
+				return acc
+			},
+			{}
 		)
 
 		return contentBlockNames

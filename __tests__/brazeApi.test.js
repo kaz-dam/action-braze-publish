@@ -7,7 +7,7 @@ describe('BrazeApiClient', () => {
 	let brazeApiClient
 	// codeql [js/hardcoded-credentials]: this is a mock API key used for testing purposes
 	const apiKey = 'mock-api-key'
-	const apiUrl = 'mock-api-url'
+	const apiUrl = 'https://mock-braze-rest-endpoint'
 
 	beforeEach(() => {
 		httpClientMock = {
@@ -27,7 +27,10 @@ describe('BrazeApiClient', () => {
 		const mockResponse = {
 			readBody: jest.fn().mockResolvedValue(
 				JSON.stringify({
-					content_blocks: [{ name: 'block1' }, { name: 'block2' }]
+					content_blocks: [
+						{ name: 'block1', content_block_id: 'block_id_1' },
+						{ name: 'block2', content_block_id: 'block_id_1' }
+					]
 				})
 			)
 		}
@@ -42,7 +45,7 @@ describe('BrazeApiClient', () => {
 				'Content-Type': 'application/json'
 			}
 		)
-		expect(result).toEqual(['block1', 'block2'])
+		expect(result).toEqual({ block1: 'block_id_1', block2: 'block_id_1' })
 	})
 
 	it('should update a content block', async () => {
@@ -56,14 +59,14 @@ describe('BrazeApiClient', () => {
 		httpClientMock.post.mockResolvedValue(mockResponse)
 
 		const result = await brazeApiClient.updateContentBlock(
-			'block1',
+			'block_id_1',
 			'new content'
 		)
 
 		expect(httpClientMock.post).toHaveBeenCalledWith(
 			`${apiUrl}/content_blocks/update`,
 			JSON.stringify({
-				content_block_id: 'block1',
+				content_block_id: 'block_id_1',
 				content: 'new content'
 			}),
 			{

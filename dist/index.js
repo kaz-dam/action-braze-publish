@@ -29213,8 +29213,12 @@ class BrazeApiClient {
 
 		const contentBlocksData = await contentBlocksResponse.readBody()
 		const contentBlocksJson = JSON.parse(contentBlocksData)
-		const contentBlockNames = contentBlocksJson.content_blocks.map(
-			contentBlock => contentBlock.name
+		const contentBlockNames = contentBlocksJson.content_blocks.reduce(
+			(acc, contentBlock) => {
+				acc[contentBlock.name] = contentBlock.content_block_id
+				return acc
+			},
+			{}
 		)
 
 		return contentBlockNames
@@ -29304,7 +29308,8 @@ async function run() {
 		const sha = context.sha
 
 		// get list of existing content blocks from Braze
-		const contentBlockNames = await brazeClient.getContentBlocks()
+		const contentBlocks = await brazeClient.getContentBlocks()
+		const contentBlockNames = Object.keys(contentBlocks)
 		core.debug(`Content blocks: ${contentBlockNames.join(', ')}`)
 
 		// get the changed files from the commit
@@ -29360,7 +29365,7 @@ async function run() {
 
 					const apiResponseJson =
 						await brazeClient.updateContentBlock(
-							contentBlockName,
+							contentBlocks[contentBlockName],
 							content
 						)
 

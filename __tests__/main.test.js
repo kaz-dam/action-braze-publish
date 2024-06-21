@@ -48,7 +48,9 @@ describe('run', () => {
 
 		BrazeApiClient.mockImplementation(() => {
 			return {
-				getContentBlocks: jest.fn().mockReturnValue(['existing-block']),
+				getContentBlocks: jest
+					.fn()
+					.mockReturnValue({ 'existing-block': 'block_id_1' }),
 				updateContentBlock: jest
 					.fn()
 					.mockResolvedValue({ liquid_tag: 'updated-tag' }),

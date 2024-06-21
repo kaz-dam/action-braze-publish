@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-- Updated handling of content block list from Braze to store their ID's, that
+- Updated handling of content block list from Braze to store their IDs, that
   can be used to update them later in the process.
 
 ## [1.0.1] - 2024-06-19

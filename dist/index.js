@@ -29384,9 +29384,15 @@ async function run() {
 							content
 						)
 
-					core.debug(
-						`Content block created: ${apiResponseJson.liquid_tag}`
-					)
+					if (apiResponseJson.message === 'success') {
+						core.debug(
+							`Content block created: ${apiResponseJson.liquid_tag}`
+						)
+					} else {
+						core.debug(
+							`Failed to create content block: ${apiResponseJson.message}`
+						)
+					}
 				}
 			}
 		}

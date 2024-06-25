@@ -54,9 +54,10 @@ describe('run', () => {
 				updateContentBlock: jest
 					.fn()
 					.mockResolvedValue({ liquid_tag: 'updated-tag' }),
-				createContentBlock: jest
-					.fn()
-					.mockResolvedValue({ liquid_tag: 'created-tag' })
+				createContentBlock: jest.fn().mockResolvedValue({
+					liquid_tag: 'created-tag',
+					message: 'success'
+				})
 			}
 		})
 	})
@@ -123,6 +124,96 @@ describe('run', () => {
 		)
 		expect(core.debug).toHaveBeenCalledWith(
 			'Content block created: created-tag'
+		)
+	})
+
+	it('should create new content blocks successfully', async () => {
+		BrazeApiClient.mockImplementation(() => {
+			return {
+				getContentBlocks: jest
+					.fn()
+					.mockReturnValue({ 'existing-block': 'block_id_1' }),
+				updateContentBlock: jest.fn(),
+				createContentBlock: jest.fn().mockResolvedValue({
+					message: 'success',
+					liquid_tag: 'created-tag'
+				})
+			}
+		})
+
+		getCommitMock.mockResolvedValue({
+			data: {
+				files: [
+					{
+						filename: 'new-block.liquid',
+						status: 'added'
+					}
+				]
+			}
+		})
+
+		getContentMock.mockResolvedValue({
+			data: {
+				content: Buffer.from('new content').toString('base64')
+			}
+		})
+
+		await run()
+
+		expect(core.debug).toHaveBeenCalledWith('File: new-block.liquid')
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block does not exist: new-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Creating content block: new-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block created: created-tag'
+		)
+	})
+
+	it('should handle content block creation failure', async () => {
+		BrazeApiClient.mockImplementation(() => {
+			return {
+				getContentBlocks: jest
+					.fn()
+					.mockReturnValue({ 'existing-block': 'block_id_1' }),
+				updateContentBlock: jest.fn(),
+				createContentBlock: jest.fn().mockResolvedValue({
+					message: 'error',
+					liquid_tag: 'created-tag'
+				})
+			}
+		})
+
+		getCommitMock.mockResolvedValue({
+			data: {
+				files: [
+					{
+						filename: 'new-block.liquid',
+						status: 'added'
+					}
+				]
+			}
+		})
+
+		getContentMock.mockResolvedValue({
+			data: {
+				content: Buffer.from('new content').toString('base64')
+			}
+		})
+
+		await run()
+
+		expect(core.debug).toHaveBeenCalledWith('File: new-block.liquid')
+		expect(core.debug).toHaveBeenCalledWith(
+			'Content block does not exist: new-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Creating content block: new-block'
+		)
+		expect(core.debug).toHaveBeenCalledWith(
+			'Failed to create content block: error'
 		)
 	})
 

@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](http://keepachangelog.com/) and this project
 adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.3] - 2024-06-25
+
+### Updated
+
+- Insert debug log to print out response error message from the Braze API,
+  if there's any.
+
 ## [1.0.2] - 2024-06-21
 
 ### Fixed

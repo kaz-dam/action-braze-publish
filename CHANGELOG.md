@@ -10,8 +10,8 @@ adheres to [Semantic Versioning](http://semver.org/).
 
 ### Updated
 
-- Insert debug log to print out response error message from the Braze API,
-  if there's any.
+- Insert debug log to print out response error message from the Braze API, if
+  there's any.
 
 ## [1.0.2] - 2024-06-21
 

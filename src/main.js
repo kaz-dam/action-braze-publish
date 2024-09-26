@@ -102,7 +102,13 @@ async function run() {
 						)
 					} else {
 						core.debug(
+							`Content block content: ${content.substring(0, 50)}...`
+						)
+						core.debug(
 							`Failed to create content block: ${apiResponseJson.message}`
+						)
+						core.debug(
+							`Minor errors: ${apiResponseJson.errors.join(', ')}`
 						)
 					}
 				}

@@ -29395,9 +29395,6 @@ async function run() {
 						core.debug(
 							`Failed to create content block: ${apiResponseJson.message}`
 						)
-						core.debug(
-							`Minor errors: ${apiResponseJson.errors.join(', ')}`
-						)
 					}
 				}
 			}

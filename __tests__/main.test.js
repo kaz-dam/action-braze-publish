@@ -181,8 +181,7 @@ describe('run', () => {
 				updateContentBlock: jest.fn(),
 				createContentBlock: jest.fn().mockResolvedValue({
 					message: 'error',
-					liquid_tag: 'created-tag',
-					errors: ['error1', 'error2']
+					liquid_tag: 'created-tag'
 				})
 			}
 		})
@@ -219,7 +218,6 @@ describe('run', () => {
 		expect(core.debug).toHaveBeenCalledWith(
 			'Failed to create content block: error'
 		)
-		expect(core.debug).toHaveBeenCalledWith('Minor errors: error1, error2')
 	})
 
 	it('should ignore non-content block files', async () => {

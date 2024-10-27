@@ -17,7 +17,8 @@ async function run() {
 
 		const owner = context.repo.owner
 		const repo = context.repo.repo
-		const sha = context.sha
+		const baseSha = context.payload.before
+		const headSha = context.sha
 
 		// get list of existing content blocks from Braze
 		const contentBlocks = await brazeClient.getContentBlocks()
@@ -25,10 +26,11 @@ async function run() {
 		core.debug(`Content blocks: ${contentBlockNames.join(', ')}`)
 
 		// get the changed files from the commit
-		const response = await octokit.rest.repos.getCommit({
+		const response = await octokit.rest.repos.compareCommits({
 			owner,
 			repo,
-			ref: sha
+			base: baseSha,
+			head: headSha
 		})
 
 		const files = response.data.files
@@ -58,7 +60,7 @@ async function run() {
 					owner,
 					repo,
 					path: filePath,
-					ref: sha
+					ref: headSha
 				})
 
 				const content = Buffer.from(

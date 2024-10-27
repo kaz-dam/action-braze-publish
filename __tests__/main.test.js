@@ -11,17 +11,20 @@ describe('run', () => {
 	let getInputMock
 	let getOctokitMock
 	let getContentMock
-	let getCommitMock
+	let compareCommitsMock
 
 	beforeEach(() => {
 		getInputMock = jest.spyOn(core, 'getInput')
 		getOctokitMock = jest.spyOn(github, 'getOctokit')
-		getCommitMock = jest.fn()
+		compareCommitsMock = jest.fn()
 		getContentMock = jest.fn()
 		github.context = {
 			repo: {
 				owner: 'owner',
 				repo: 'repo'
+			},
+			payload: {
+				before: 'sha456'
 			},
 			sha: 'sha123'
 		}
@@ -40,7 +43,7 @@ describe('run', () => {
 		getOctokitMock.mockReturnValue({
 			rest: {
 				repos: {
-					getCommit: getCommitMock,
+					compareCommits: compareCommitsMock,
 					getContent: getContentMock
 				}
 			}
@@ -67,7 +70,7 @@ describe('run', () => {
 	})
 
 	it('should process modified files and update content blocks', async () => {
-		getCommitMock.mockResolvedValue({
+		compareCommitsMock.mockResolvedValue({
 			data: {
 				files: [
 					{
@@ -96,7 +99,7 @@ describe('run', () => {
 	})
 
 	it('should process added files and create new content blocks', async () => {
-		getCommitMock.mockResolvedValue({
+		compareCommitsMock.mockResolvedValue({
 			data: {
 				files: [
 					{
@@ -141,7 +144,7 @@ describe('run', () => {
 			}
 		})
 
-		getCommitMock.mockResolvedValue({
+		compareCommitsMock.mockResolvedValue({
 			data: {
 				files: [
 					{
@@ -186,7 +189,7 @@ describe('run', () => {
 			}
 		})
 
-		getCommitMock.mockResolvedValue({
+		compareCommitsMock.mockResolvedValue({
 			data: {
 				files: [
 					{
@@ -221,7 +224,7 @@ describe('run', () => {
 	})
 
 	it('should ignore non-content block files', async () => {
-		getCommitMock.mockResolvedValue({
+		compareCommitsMock.mockResolvedValue({
 			data: {
 				files: [
 					{
@@ -241,7 +244,7 @@ describe('run', () => {
 	})
 
 	it('should process files in content_blocks directory', async () => {
-		getCommitMock.mockResolvedValue({
+		compareCommitsMock.mockResolvedValue({
 			data: {
 				files: [
 					{
@@ -272,7 +275,7 @@ describe('run', () => {
 	})
 
 	it('should ignore unmodified files', async () => {
-		getCommitMock.mockResolvedValue({
+		compareCommitsMock.mockResolvedValue({
 			data: {
 				files: [
 					{
@@ -292,7 +295,7 @@ describe('run', () => {
 
 	it('should handle errors gracefully', async () => {
 		const errorMessage = 'Something went wrong'
-		getCommitMock.mockRejectedValue(new Error(errorMessage))
+		compareCommitsMock.mockRejectedValue(new Error(errorMessage))
 
 		await run()
 

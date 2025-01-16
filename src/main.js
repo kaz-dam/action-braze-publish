@@ -11,6 +11,8 @@ async function run() {
 		const token = core.getInput('GITHUB_TOKEN')
 		const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
 		const brazeApiKey = core.getInput('BRAZE_API_KEY')
+		const workspacePath = process.env.GITHUB_WORKSPACE;
+		const deploymentMode = core.getInput('DEPLOYMENT_MODE')
 		const octokit = github.getOctokit(token)
 		const context = github.context
 		const brazeClient = new BrazeApiClient(brazeApiKey, brazeRestEndpoint)

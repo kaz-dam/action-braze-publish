@@ -7,6 +7,10 @@ branding:
 
 # Define your inputs here.
 inputs:
+    DEPLOYMENT_MODE:
+        description: 'Deployment mode: init or update'
+        required: false
+        default: 'update'
     GITHUB_TOKEN:
         description: 'GitHub Token'
         required: true

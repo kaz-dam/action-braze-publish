@@ -1,6 +1,6 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
-const BrazeApiClient = require('../src/brazeApi')
+const BrazeApiClient = require('../src/BrazeApiClient')
 const { run } = require('../src/main')
 
 jest.mock('@actions/core')

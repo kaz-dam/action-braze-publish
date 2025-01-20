@@ -1,6 +1,6 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
-const BrazeApiClient = require('./brazeApi')
+const BrazeApiClient = require('./BrazeApiClient')
 
 /**
  * The main function for the action.

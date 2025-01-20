@@ -1,6 +1,8 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
 const BrazeApiClient = require('./BrazeApiClient')
+const InitDeployer = require('./InitDeployer')
+const UpdateDeployer = require('./UpdateDeployer')
 
 /**
  * The main function for the action.
@@ -11,8 +13,8 @@ async function run() {
 		const token = core.getInput('GITHUB_TOKEN')
 		const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
 		const brazeApiKey = core.getInput('BRAZE_API_KEY')
-		const workspacePath = process.env.GITHUB_WORKSPACE;
 		const deploymentMode = core.getInput('DEPLOYMENT_MODE')
+
 		const octokit = github.getOctokit(token)
 		const context = github.context
 		const brazeClient = new BrazeApiClient(brazeApiKey, brazeRestEndpoint)
@@ -22,99 +24,19 @@ async function run() {
 		const baseSha = context.payload.before
 		const headSha = context.sha
 
-		// get list of existing content blocks from Braze
 		const contentBlocks = await brazeClient.getContentBlocks()
 		const contentBlockNames = Object.keys(contentBlocks)
-		core.debug(`Content blocks: ${contentBlockNames.join(', ')}`)
 
-		// get the changed files from the commit
-		const response = await octokit.rest.repos.compareCommits({
-			owner,
-			repo,
-			base: baseSha,
-			head: headSha
-		})
+		let deployer;
 
-		const files = response.data.files
-
-		// loop through the files and update the content blocks
-		for (const file of files) {
-			// only process added or modified files
-			if (file.status === 'added' || file.status === 'modified') {
-				const filePath = file.filename
-				const fileName = filePath.split('/').pop()
-				const fileExtension = filePath.split('.').pop()
-				const isContentBlock =
-					filePath
-						.split('/')
-						.slice(0, -1)
-						.filter(part => part === 'content_blocks').length > 0 ||
-					fileExtension === 'liquid'
-
-				core.debug(`File: ${filePath}`)
-
-				if (!isContentBlock) {
-					core.debug(`Skipping file: ${filePath}`)
-					continue
-				}
-
-				const contentResponse = await octokit.rest.repos.getContent({
-					owner,
-					repo,
-					path: filePath,
-					ref: headSha
-				})
-
-				const content = Buffer.from(
-					contentResponse.data.content,
-					'base64'
-				).toString('utf8')
-
-				const contentBlockName = fileName
-					.split('.')
-					.slice(0, -1)
-					.join('.')
-
-				// check if the content block exists and update or create it
-				if (contentBlockNames.includes(contentBlockName)) {
-					core.debug(`Content block exists: ${contentBlockName}`)
-
-					const apiResponseJson =
-						await brazeClient.updateContentBlock(
-							contentBlocks[contentBlockName],
-							content
-						)
-
-					core.debug(
-						`Content block updated: ${apiResponseJson.liquid_tag}`
-					)
-				} else {
-					core.debug(
-						`Content block does not exist: ${contentBlockName}`
-					)
-					core.debug(`Creating content block: ${contentBlockName}`)
-
-					const apiResponseJson =
-						await brazeClient.createContentBlock(
-							contentBlockName,
-							content
-						)
-
-					if (apiResponseJson.message === 'success') {
-						core.debug(
-							`Content block created: ${apiResponseJson.liquid_tag}`
-						)
-					} else {
-						core.debug(
-							`Content block content: ${content.substring(0, 50)}...`
-						)
-						core.debug(
-							`Failed to create content block: ${apiResponseJson.message}`
-						)
-					}
-				}
-			}
+		if (deploymentMode === 'init') {
+			deployer = new InitDeployer(brazeClient)
+		} else {
+			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
+
+		await deployer.deploy(contentBlockNames)
+
 	} catch (error) {
 		core.setFailed(error.message)
 	}

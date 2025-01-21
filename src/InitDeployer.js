@@ -2,24 +2,26 @@ const fs = require('fs')
 const path = require('path')
 const core = require('@actions/core')
 const Constants = require('./Constants')
+const BaseDeployer = require('./BaseDeployer')
 
-class InitDeployer {
+class InitDeployer extends BaseDeployer {
     constructor(brazeClient) {
         this.brazeClient = brazeClient
         this.workspacePath = process.env.GITHUB_WORKSPACE
     }
 
-    async deploy(contentBlockNames) {
+    async deploy(existingContentBlocks) {
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
 
-        for (const file of files) {
-            const fileName = path.basename(file, path.extname(file))
-            const content = fs.readFileSync(file, 'utf8')
+        const resolvedFile = this.resolveDependencies(files, new Set(existingContentBlocks))
 
-            if (contentBlockNames.includes(fileName)) {
-                await this.brazeClient.updateContentBlock(fileName, content)
+        for (const file of resolvedFile) {
+            const contentBlockName = this.getContentBlockName(file.path)
+
+            if (existingContentBlocks.includes(contentBlockName)) {
+                await this.brazeClient.updateContentBlock(contentBlockName, file.content)
             } else {
-                await this.brazeClient.createContentBlock(fileName, content)
+                await this.brazeClient.createContentBlock(contentBlockName, file.content)
             }
         }
     }
@@ -33,7 +35,10 @@ class InitDeployer {
             if (fs.statSync(fullPath).isDirectory()) {
                 this.getAllFiles(fullPath, files)
             } else if (Constants.FILE_EXTENSIONS.includes(path.extname(fullPath).slice(1))) {
-                files.push(fullPath)
+                files.push({
+                    path: fullPath,
+                    content: fs.readFileSync(fullPath, 'utf8')
+                })
             }
         }
 

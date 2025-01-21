@@ -8,7 +8,7 @@ class BaseDeployer {
         const fileMap = new Map()
 
         for (const file of files) {
-            const fileName = this.getContentBlockName(file)
+            const fileName = this.getContentBlockName(file.path)
             const content = file.content
 
             fileMap.set(fileName, file)

@@ -1,66 +1,79 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
 const BrazeApiClient = require('../src/BrazeApiClient')
+const InitDeployer = require('../src/InitDeployer')
+const UpdateDeployer = require('../src/UpdateDeployer')
 const { run } = require('../src/main')
 
 jest.mock('@actions/core')
 jest.mock('@actions/github')
-jest.mock('../src/brazeApi')
+jest.mock('../src/BrazeApiClient')
+jest.mock('../src/InitDeployer')
+jest.mock('../src/UpdateDeployer')
 
-describe('run', () => {
-	let getInputMock
-	let getOctokitMock
-	let getContentMock
-	let compareCommitsMock
+describe('main.js', () => {
+	let mockGetInput,
+		mockGetOctokit,
+		mockContext,
+		mockBrazeClient,
+		mockInitDeployer,
+		mockUpdateDeployer
 
 	beforeEach(() => {
-		getInputMock = jest.spyOn(core, 'getInput')
-		getOctokitMock = jest.spyOn(github, 'getOctokit')
-		compareCommitsMock = jest.fn()
-		getContentMock = jest.fn()
-		github.context = {
+		jest.spyOn(core, 'setFailed')
+		mockGetInput = jest.spyOn(core, 'getInput')
+		mockGetInput.mockImplementation((inputName) => {
+			const inputs = {
+				GITHUB_TOKEN: 'test-token',
+				BRAZE_REST_ENDPOINT: 'https://test.braze.endpoint',
+				BRAZE_API_KEY: 'test-api-key',
+				DEPLOYMENT_MODE: 'init'
+			}
+			return inputs[inputName]
+		})
+
+		mockContext = {
 			repo: {
-				owner: 'owner',
-				repo: 'repo'
+				owner: 'test-owner',
+				repo: 'test-repo'
 			},
 			payload: {
-				before: 'sha456'
+				before: 'base-sha'
 			},
-			sha: 'sha123'
+			sha: 'head-sha'
 		}
+		github.context = mockContext
 
-		getInputMock.mockImplementation(name => {
-			switch (name) {
-				case 'GITHUB_TOKEN':
-					return 'mock-github-token'
-				case 'BRAZE_REST_ENDPOINT':
-					return 'mock-braze-rest-endpoint'
-				case 'BRAZE_API_KEY':
-					return 'mock-braze-api-key'
-			}
-		})
-
-		getOctokitMock.mockReturnValue({
+		mockGetOctokit = {
 			rest: {
 				repos: {
-					compareCommits: compareCommitsMock,
-					getContent: getContentMock
+					compareCommits: jest.fn(),
+					getContent: jest.fn()
 				}
+			}
+		}
+		mockGetOctokit = jest.spyOn(github, 'getOctokit')
+			.mockReturnValue(mockGetOctokit)
+
+		mockBrazeClient = {
+			getContentBlocks: jest.fn().mockResolvedValue({
+				block1: 'block_id_1',
+				block2: 'block_id_1'
+			})
+		}
+		BrazeApiClient.mockImplementation(() => mockBrazeClient)
+
+		mockInitDeployer = jest.spyOn(InitDeployer.prototype, 'deploy')
+		mockInitDeployer.mockImplementation(() => {
+			return {
+				deploy: jest.fn().mockResolvedValue()
 			}
 		})
 
-		BrazeApiClient.mockImplementation(() => {
+		mockUpdateDeployer = jest.spyOn(UpdateDeployer.prototype, 'deploy')
+		mockUpdateDeployer.mockImplementation(() => {
 			return {
-				getContentBlocks: jest
-					.fn()
-					.mockReturnValue({ 'existing-block': 'block_id_1' }),
-				updateContentBlock: jest
-					.fn()
-					.mockResolvedValue({ liquid_tag: 'updated-tag' }),
-				createContentBlock: jest.fn().mockResolvedValue({
-					liquid_tag: 'created-tag',
-					message: 'success'
-				})
+				deploy: jest.fn().mockResolvedValue()
 			}
 		})
 	})
@@ -69,233 +82,48 @@ describe('run', () => {
 		jest.resetAllMocks()
 	})
 
-	it('should process modified files and update content blocks', async () => {
-		compareCommitsMock.mockResolvedValue({
-			data: {
-				files: [
-					{
-						filename: 'existing-block.liquid',
-						status: 'modified'
-					}
-				]
-			}
-		})
-
-		getContentMock.mockResolvedValue({
-			data: {
-				content: Buffer.from('new content').toString('base64')
-			}
-		})
-
+	it('should instantiate BrazeApiClient with the correct arguments', async () => {
 		await run()
 
-		expect(core.debug).toHaveBeenCalledWith('File: existing-block.liquid')
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block exists: existing-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block updated: updated-tag'
-		)
+		expect(BrazeApiClient).toHaveBeenCalledWith('test-api-key', 'https://test.braze.endpoint')
+		expect(mockBrazeClient.getContentBlocks).toHaveBeenCalled()
 	})
 
-	it('should process added files and create new content blocks', async () => {
-		compareCommitsMock.mockResolvedValue({
-			data: {
-				files: [
-					{
-						filename: 'new-block.liquid',
-						status: 'added'
-					}
-				]
-			}
-		})
-
-		getContentMock.mockResolvedValue({
-			data: {
-				content: Buffer.from('new content').toString('base64')
-			}
-		})
-
+	it('should call InitDeployer for "init" deployment mode', async () => {
 		await run()
 
-		expect(core.debug).toHaveBeenCalledWith('File: new-block.liquid')
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block does not exist: new-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Creating content block: new-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block created: created-tag'
-		)
+		expect(InitDeployer).toHaveBeenCalledWith(mockBrazeClient)
+		expect(UpdateDeployer).not.toHaveBeenCalled()
+
+		const initDeployerInstance = InitDeployer.mock.instances[0]
+		expect(initDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'])
 	})
-
-	it('should create new content blocks successfully', async () => {
-		BrazeApiClient.mockImplementation(() => {
-			return {
-				getContentBlocks: jest
-					.fn()
-					.mockReturnValue({ 'existing-block': 'block_id_1' }),
-				updateContentBlock: jest.fn(),
-				createContentBlock: jest.fn().mockResolvedValue({
-					message: 'success',
-					liquid_tag: 'created-tag'
-				})
-			}
-		})
-
-		compareCommitsMock.mockResolvedValue({
-			data: {
-				files: [
-					{
-						filename: 'new-block.liquid',
-						status: 'added'
-					}
-				]
-			}
-		})
-
-		getContentMock.mockResolvedValue({
-			data: {
-				content: Buffer.from('new content').toString('base64')
-			}
-		})
+	
+	it('should call UpdateDeployer for "update" deployment mode', async () => {
+		mockGetInput.mockImplementation((inputName) => {
+			const inputs = {
+				GITHUB_TOKEN: 'test-token',
+				BRAZE_REST_ENDPOINT: 'https://api.braze.com',
+				BRAZE_API_KEY: 'test-api-key',
+				DEPLOYMENT_MODE: 'update',
+			};
+			return inputs[inputName];
+		});
 
 		await run()
 
-		expect(core.debug).toHaveBeenCalledWith('File: new-block.liquid')
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block does not exist: new-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Creating content block: new-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block created: created-tag'
-		)
-	})
+		expect(UpdateDeployer).toHaveBeenCalledWith(github.getOctokit('test-token'), mockBrazeClient, 'test-owner', 'test-repo', 'base-sha', 'head-sha')
+		expect(InitDeployer).not.toHaveBeenCalled()
 
-	it('should handle content block creation failure', async () => {
-		BrazeApiClient.mockImplementation(() => {
-			return {
-				getContentBlocks: jest
-					.fn()
-					.mockReturnValue({ 'existing-block': 'block_id_1' }),
-				updateContentBlock: jest.fn(),
-				createContentBlock: jest.fn().mockResolvedValue({
-					message: 'error',
-					liquid_tag: 'created-tag'
-				})
-			}
-		})
-
-		compareCommitsMock.mockResolvedValue({
-			data: {
-				files: [
-					{
-						filename: 'new-block.liquid',
-						status: 'added'
-					}
-				]
-			}
-		})
-
-		getContentMock.mockResolvedValue({
-			data: {
-				content: Buffer.from('new content').toString('base64')
-			}
-		})
-
-		await run()
-
-		expect(core.debug).toHaveBeenCalledWith('File: new-block.liquid')
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block does not exist: new-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Creating content block: new-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block content: new content...'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Failed to create content block: error'
-		)
-	})
-
-	it('should ignore non-content block files', async () => {
-		compareCommitsMock.mockResolvedValue({
-			data: {
-				files: [
-					{
-						filename: 'some-other-file.txt',
-						status: 'added'
-					}
-				]
-			}
-		})
-
-		await run()
-
-		expect(core.debug).toHaveBeenCalledWith('File: some-other-file.txt')
-		expect(core.debug).toHaveBeenCalledWith(
-			'Skipping file: some-other-file.txt'
-		)
-	})
-
-	it('should process files in content_blocks directory', async () => {
-		compareCommitsMock.mockResolvedValue({
-			data: {
-				files: [
-					{
-						filename: 'content_blocks/some-block.liquid',
-						status: 'added'
-					}
-				]
-			}
-		})
-
-		getContentMock.mockResolvedValue({
-			data: {
-				content: Buffer.from('new content').toString('base64')
-			}
-		})
-
-		await run()
-
-		expect(core.debug).toHaveBeenCalledWith(
-			'File: content_blocks/some-block.liquid'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Creating content block: some-block'
-		)
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content block created: created-tag'
-		)
-	})
-
-	it('should ignore unmodified files', async () => {
-		compareCommitsMock.mockResolvedValue({
-			data: {
-				files: [
-					{
-						filename: 'existing-block.liquid',
-						status: 'removed'
-					}
-				]
-			}
-		})
-
-		await run()
-
-		expect(core.debug).toHaveBeenCalledWith(
-			'Content blocks: existing-block'
-		)
+		const updateDeployerInstance = UpdateDeployer.mock.instances[0]
+		expect(updateDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'])
 	})
 
 	it('should handle errors gracefully', async () => {
 		const errorMessage = 'Something went wrong'
-		compareCommitsMock.mockRejectedValue(new Error(errorMessage))
+		InitDeployer.mockImplementation(() => ({
+			deploy: jest.fn().mockRejectedValue(new Error(errorMessage))
+		}))
 
 		await run()
 

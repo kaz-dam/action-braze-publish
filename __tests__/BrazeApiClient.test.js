@@ -1,4 +1,4 @@
-const BrazeApiClient = require('../src/brazeApi')
+const BrazeApiClient = require('../src/BrazeApiClient')
 const { HttpClient } = require('@actions/http-client')
 jest.mock('@actions/http-client')
 

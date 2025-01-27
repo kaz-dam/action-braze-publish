@@ -1,9 +1,9 @@
 const core = require('@actions/core')
-const Constants = require('./Constants')
 const BaseDeployer = require('./BaseDeployer')
 
 class UpdateDeployer extends BaseDeployer {
     constructor(octokit, brazeClient, owner, repo, baseSha, headSha) {
+        super()
         this.octokit = octokit
         this.brazeClient = brazeClient
         this.owner = owner

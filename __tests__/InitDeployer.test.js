@@ -3,7 +3,6 @@ const path = require('path')
 const BrazeApiClient = require('../src/BrazeApiClient')
 const InitDeployer = require('../src/InitDeployer')
 const Constants = require('../src/Constants')
-const { get } = require('http')
 
 jest.mock('fs')
 jest.mock('path')

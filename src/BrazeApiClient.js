@@ -1,4 +1,3 @@
-const core = require('@actions/core')
 const { HttpClient } = require('@actions/http-client')
 
 class BrazeApiClient {

@@ -1,11 +1,11 @@
 const fs = require('fs')
 const path = require('path')
-const core = require('@actions/core')
 const Constants = require('./Constants')
 const BaseDeployer = require('./BaseDeployer')
 
 class InitDeployer extends BaseDeployer {
     constructor(brazeClient) {
+        super()
         this.brazeClient = brazeClient
         this.workspacePath = process.env.GITHUB_WORKSPACE
     }

@@ -8,7 +8,6 @@ jest.mock('../src/BrazeApiClient')
 describe('UpdateDeployer', () => {
     let mockBrazeClient
     let updateDeployer
-    const mockWorkspacePath = '/mock/workspace'
     const mockContentBlocksDir = 'content_blocks'
     const mockOctokit = {
         rest: {
@@ -35,8 +34,8 @@ describe('UpdateDeployer', () => {
         mockOctokit.rest.repos.compareCommits.mockResolvedValue({
             data: {
                 files: [
-                    { filename: `${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid` },
-                    { filename: `${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid` }
+                    { filename: `${mockContentBlocksDir}/file1.liquid` },
+                    { filename: `${mockContentBlocksDir}/file2.liquid` }
                 ]
             }
         })
@@ -48,8 +47,8 @@ describe('UpdateDeployer', () => {
         }))
 
         jest.spyOn(updateDeployer, 'resolveDependencies').mockReturnValue([
-            { path: `${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid`, content: `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid` },
-            { path: `${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`, content: `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid` }
+            { path: `${mockContentBlocksDir}/file1.liquid`, content: `Content of ${mockContentBlocksDir}/file1.liquid` },
+            { path: `${mockContentBlocksDir}/file2.liquid`, content: `Content of ${mockContentBlocksDir}/file2.liquid` }
         ])
 
         jest.spyOn(updateDeployer, 'getContentBlockName').mockImplementation((filePath) => filePath.split('/').pop().split('.').slice(0, -1).join('.'))
@@ -64,8 +63,8 @@ describe('UpdateDeployer', () => {
 
         await updateDeployer.deploy(existingContentBlocks)
 
-        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid`)
-        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`)
+        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockContentBlocksDir}/file1.liquid`)
+        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockContentBlocksDir}/file2.liquid`)
     })
     
     it('should create new content blocks according to commit history', async () => {
@@ -73,7 +72,7 @@ describe('UpdateDeployer', () => {
 
         await updateDeployer.deploy(existingContentBlocks)
 
-        expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid`)
-        expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`)
+        expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockContentBlocksDir}/file1.liquid`)
+        expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockContentBlocksDir}/file2.liquid`)
     })
 })

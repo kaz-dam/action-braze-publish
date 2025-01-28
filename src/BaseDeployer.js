@@ -1,51 +1,61 @@
 class BaseDeployer {
     constructor(brazeClient) {
         this.brazeClient = brazeClient
+        this.fileMap = new Map()
+        this.resolved = new Set()
+        this.dependencyGraph = new Map()
+        this.orderedFiles = []
     }
 
     resolveDependencies(files, existingBlocks) {
-        const dependencyGraph = new Map()
-        const fileMap = new Map()
+        this.createDependencyGraph(files)
 
+        for (const fileName of this.dependencyGraph.keys()) {
+            this.resolveFile(fileName, existingBlocks)
+        }
+
+        return this.orderedFiles
+    }
+
+    resolveFile(fileName, existingContentBlocks = []) {
+        if (this.resolved.has(fileName)) return
+
+        const dependencies = this.getDependencyGraph(fileName)
+
+        for (const dependency of dependencies) {
+            if (this.resolved.has(dependency) && existingContentBlocks.includes(dependency)) continue
+            
+            if (!this.fileMap.has(dependency)) {
+                throw new Error(`Referenced content block '${dependency}' does not exist in the repository or Braze.`)
+            }
+
+            this.resolveFile(dependency, existingContentBlocks)
+        }
+
+        this.trackFileNames(fileName)
+    }
+
+    createDependencyGraph(files) {
         for (const file of files) {
             const fileName = this.getContentBlockName(file.path)
             const content = file.content
 
-            fileMap.set(fileName, file)
+            this.fileMap.set(fileName, file)
 
             const dependencies = this.extractReferences(content)
-            dependencyGraph.set(fileName, dependencies)
+            this.dependencyGraph.set(fileName, dependencies)
         }
+    }
 
-        const resolved = new Set()
-        const orderedFiles = []
+    getDependencyGraph(fileName) {
+        return this.dependencyGraph.get(fileName) || []
+    }
 
-        const resolveFile = (fileName) => {
-            if (resolved.has(fileName)) return
-
-            const dependencies = dependencyGraph.get(fileName) || []
-
-            for (const dependency of dependencies) {
-                if (!resolved.has(dependency) && !existingBlocks.has(dependency)) {
-                    if (!fileMap.has(dependency)) {
-                        throw new Error(`Referenced content block '${dependency}' does not exist in the repository or Braze.`)
-                    }
-
-                    resolveFile(dependency)
-                }
-            }
-
-            if (fileMap.has(fileName)) {
-                orderedFiles.push(fileMap.get(fileName))
-                resolved.add(fileName)
-            }
+    trackFileNames(fileName) {
+        if (this.fileMap.has(fileName)) {
+            this.orderedFiles.push(this.fileMap.get(fileName))
+            this.resolved.add(fileName)
         }
-
-        for (const fileName of dependencyGraph.keys()) {
-            resolveFile(fileName)
-        }
-
-        return orderedFiles
     }
 
     extractReferences(content) {

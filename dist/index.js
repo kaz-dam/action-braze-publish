@@ -29188,10 +29188,93 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 401:
+/***/ 2971:
+/***/ ((module) => {
+
+class BaseDeployer {
+    constructor(brazeClient) {
+        this.brazeClient = brazeClient
+        this.fileMap = new Map()
+        this.resolved = new Set()
+        this.dependencyGraph = new Map()
+        this.orderedFiles = []
+    }
+
+    resolveDependencies(files, existingBlocks) {
+        this.createDependencyGraph(files)
+
+        for (const fileName of this.dependencyGraph.keys()) {
+            this.resolveFile(fileName, existingBlocks)
+        }
+
+        return this.orderedFiles
+    }
+
+    resolveFile(fileName, existingContentBlocks = []) {
+        if (this.resolved.has(fileName)) return
+
+        const dependencies = this.getDependencyGraph(fileName)
+
+        for (const dependency of dependencies) {
+            if (this.resolved.has(dependency) && existingContentBlocks.includes(dependency)) continue
+            
+            if (!this.fileMap.has(dependency)) {
+                throw new Error(`Referenced content block '${dependency}' does not exist in the repository or Braze.`)
+            }
+
+            this.resolveFile(dependency, existingContentBlocks)
+        }
+
+        this.trackFileNames(fileName)
+    }
+
+    createDependencyGraph(files) {
+        for (const file of files) {
+            const fileName = this.getContentBlockName(file.path)
+            const content = file.content
+
+            this.fileMap.set(fileName, file)
+
+            const dependencies = this.extractReferences(content)
+            this.dependencyGraph.set(fileName, dependencies)
+        }
+    }
+
+    getDependencyGraph(fileName) {
+        return this.dependencyGraph.get(fileName) || []
+    }
+
+    trackFileNames(fileName) {
+        if (this.fileMap.has(fileName)) {
+            this.orderedFiles.push(this.fileMap.get(fileName))
+            this.resolved.add(fileName)
+        }
+    }
+
+    extractReferences(content) {
+        const regex = /\{\{content_blocks\.\$\{([\w-]+)\}\}\}/g
+        const references = []
+        let match
+
+        while ((match = regex.exec(content)) !== null) {
+            references.push(match[1])
+        }
+
+        return references
+    }
+
+    getContentBlockName(filePath) {
+        return filePath.split('/').pop().split('.').slice(0, -1).join('.')
+    }
+}
+
+module.exports = BaseDeployer
+
+/***/ }),
+
+/***/ 6623:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const core = __nccwpck_require__(2186)
 const { HttpClient } = __nccwpck_require__(6255)
 
 class BrazeApiClient {
@@ -29283,12 +29366,141 @@ module.exports = BrazeApiClient
 
 /***/ }),
 
+/***/ 9493:
+/***/ ((module) => {
+
+class Constants {
+    static CONTENT_BLOCKS_DIR = 'content_blocks'
+    static FILE_EXTENSIONS = ['liquid']
+}
+
+module.exports = Constants
+
+/***/ }),
+
+/***/ 146:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const fs = __nccwpck_require__(7147)
+const path = __nccwpck_require__(1017)
+const Constants = __nccwpck_require__(9493)
+const BaseDeployer = __nccwpck_require__(2971)
+
+class InitDeployer extends BaseDeployer {
+    constructor(brazeClient) {
+        super()
+        this.brazeClient = brazeClient
+        this.workspacePath = process.env.GITHUB_WORKSPACE
+    }
+
+    async deploy(existingContentBlocks) {
+        const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
+
+        const resolvedFile = this.resolveDependencies(files, new Set(existingContentBlocks))
+
+        for (const file of resolvedFile) {
+            const contentBlockName = this.getContentBlockName(file.path)
+
+            if (existingContentBlocks.includes(contentBlockName)) {
+                await this.brazeClient.updateContentBlock(contentBlockName, file.content)
+            } else {
+                await this.brazeClient.createContentBlock(contentBlockName, file.content)
+            }
+        }
+    }
+
+    getAllFiles(dirPath, files = []) {
+        const items = fs.readdirSync(dirPath)
+
+        for (const item of items) {
+            const fullPath = path.join(dirPath, item)
+
+            if (fs.statSync(fullPath).isDirectory()) {
+                this.getAllFiles(fullPath, files)
+            } else if (Constants.FILE_EXTENSIONS.includes(path.extname(fullPath).slice(1))) {
+                files.push({
+                    path: fullPath,
+                    content: fs.readFileSync(fullPath, 'utf8')
+                })
+            }
+        }
+
+        return files
+    }
+}
+
+module.exports = InitDeployer
+
+/***/ }),
+
+/***/ 3200:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(2186)
+const BaseDeployer = __nccwpck_require__(2971)
+
+class UpdateDeployer extends BaseDeployer {
+    constructor(octokit, brazeClient, owner, repo, baseSha, headSha) {
+        super()
+        this.octokit = octokit
+        this.brazeClient = brazeClient
+        this.owner = owner
+        this.repo = repo
+        this.baseSha = baseSha
+        this.headSha = headSha
+    }
+
+    async deploy(existingContentBlocks) {
+        core.info('Running Update Mode - Uploading changed or new content blocks.')
+
+        const response = await this.octokit.rest.repos.compareCommits({
+			owner: this.owner,
+			repo: this.repo,
+			base: this.baseSha,
+			head: this.headSha
+		})
+
+        const files = await Promise.all(
+            response.data.files.map(async (file) => ({
+                path: file.filename,
+                content: Buffer.from((
+                    await this.octokit.rest.repos.getContent({
+                        owner: this.owner,
+                        repo: this.repo,
+                        path: file.filename,
+                        ref: this.headSha
+                    }).data.content,
+                    'base64'
+                )).toString('utf8')
+            }))
+        )
+
+        const resolvedFiles = this.resolveDependencies(files, new Set(existingContentBlocks))
+
+        for (const file of resolvedFiles) {
+            const contentBlockName = this.getContentBlockName(file.path)
+
+            if (existingContentBlocks.includes(contentBlockName)) {
+                await this.brazeClient.updateContentBlock(contentBlockName, file.content)
+            } else {
+                await this.brazeClient.createContentBlock(contentBlockName, file.content)
+            }
+        }
+    }
+}
+
+module.exports = UpdateDeployer
+
+/***/ }),
+
 /***/ 1713:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(2186)
 const github = __nccwpck_require__(5438)
-const BrazeApiClient = __nccwpck_require__(401)
+const BrazeApiClient = __nccwpck_require__(6623)
+const InitDeployer = __nccwpck_require__(146)
+const UpdateDeployer = __nccwpck_require__(3200)
 
 /**
  * The main function for the action.
@@ -29299,106 +29511,30 @@ async function run() {
 		const token = core.getInput('GITHUB_TOKEN')
 		const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
 		const brazeApiKey = core.getInput('BRAZE_API_KEY')
+		const deploymentMode = core.getInput('DEPLOYMENT_MODE')
+
 		const octokit = github.getOctokit(token)
 		const context = github.context
 		const brazeClient = new BrazeApiClient(brazeApiKey, brazeRestEndpoint)
 
 		const owner = context.repo.owner
 		const repo = context.repo.repo
-		const sha = context.sha
+		const baseSha = context.payload.before
+		const headSha = context.sha
 
-		// get list of existing content blocks from Braze
 		const contentBlocks = await brazeClient.getContentBlocks()
 		const contentBlockNames = Object.keys(contentBlocks)
-		core.debug(`Content blocks: ${contentBlockNames.join(', ')}`)
 
-		// get the changed files from the commit
-		const response = await octokit.rest.repos.getCommit({
-			owner,
-			repo,
-			ref: sha
-		})
+		let deployer;
 
-		const files = response.data.files
-
-		// loop through the files and update the content blocks
-		for (const file of files) {
-			// only process added or modified files
-			if (file.status === 'added' || file.status === 'modified') {
-				const filePath = file.filename
-				const fileName = filePath.split('/').pop()
-				const fileExtension = filePath.split('.').pop()
-				const isContentBlock =
-					filePath
-						.split('/')
-						.slice(0, -1)
-						.filter(part => part === 'content_blocks').length > 0 ||
-					fileExtension === 'liquid'
-
-				core.debug(`File: ${filePath}`)
-
-				if (!isContentBlock) {
-					core.debug(`Skipping file: ${filePath}`)
-					continue
-				}
-
-				const contentResponse = await octokit.rest.repos.getContent({
-					owner,
-					repo,
-					path: filePath,
-					ref: sha
-				})
-
-				const content = Buffer.from(
-					contentResponse.data.content,
-					'base64'
-				).toString('utf8')
-
-				const contentBlockName = fileName
-					.split('.')
-					.slice(0, -1)
-					.join('.')
-
-				// check if the content block exists and update or create it
-				if (contentBlockNames.includes(contentBlockName)) {
-					core.debug(`Content block exists: ${contentBlockName}`)
-
-					const apiResponseJson =
-						await brazeClient.updateContentBlock(
-							contentBlocks[contentBlockName],
-							content
-						)
-
-					core.debug(
-						`Content block updated: ${apiResponseJson.liquid_tag}`
-					)
-				} else {
-					core.debug(
-						`Content block does not exist: ${contentBlockName}`
-					)
-					core.debug(`Creating content block: ${contentBlockName}`)
-
-					const apiResponseJson =
-						await brazeClient.createContentBlock(
-							contentBlockName,
-							content
-						)
-
-					if (apiResponseJson.message === 'success') {
-						core.debug(
-							`Content block created: ${apiResponseJson.liquid_tag}`
-						)
-					} else {
-						core.debug(
-							`Content block content: ${content.substring(0, 50)}...`
-						)
-						core.debug(
-							`Failed to create content block: ${apiResponseJson.message}`
-						)
-					}
-				}
-			}
+		if (deploymentMode === 'init') {
+			deployer = new InitDeployer(brazeClient)
+		} else {
+			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
+
+		await deployer.deploy(contentBlockNames)
+
 	} catch (error) {
 		core.setFailed(error.message)
 	}

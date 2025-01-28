@@ -13,7 +13,7 @@ class InitDeployer extends BaseDeployer {
     async deploy(existingContentBlocks) {
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
 
-        const resolvedFile = this.resolveDependencies(files, new Set(existingContentBlocks))
+        const resolvedFile = this.resolveDependencies(files, existingContentBlocks)
 
         for (const file of resolvedFile) {
             const contentBlockName = this.getContentBlockName(file.path)

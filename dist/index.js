@@ -29397,7 +29397,7 @@ class InitDeployer extends BaseDeployer {
         Logger.debug(`Workspace path: ${this.workspacePath}`)
     }
 
-    async deploy(existingContentBlocks) {
+    async deploy(existingContentBlocks, contentBlocksWithIds) {
         Logger.info('Deploying content blocks in the init mode')
 
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
@@ -29410,7 +29410,7 @@ class InitDeployer extends BaseDeployer {
             Logger.debug(`Processing content block file ${contentBlockName}`)
 
             if (existingContentBlocks.includes(contentBlockName)) {
-                await this.brazeClient.updateContentBlock(contentBlockName, file.content)
+                await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
                 Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
                 await this.brazeClient.createContentBlock(contentBlockName, file.content)
@@ -29521,7 +29521,7 @@ class UpdateDeployer extends BaseDeployer {
         Logger.info('Initializing the UpdateDeployer')
     }
 
-    async deploy(existingContentBlocks) {
+    async deploy(existingContentBlocks, contentBlocksWithIds) {
         Logger.info('Deploying content blocks in the update mode')
 
         const response = await this.octokit.rest.repos.compareCommits({
@@ -29556,7 +29556,7 @@ class UpdateDeployer extends BaseDeployer {
             Logger.debug(`Processing content block file ${contentBlockName}`)
 
             if (existingContentBlocks.includes(contentBlockName)) {
-                await this.brazeClient.updateContentBlock(contentBlockName, file.content)
+                await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
                 Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
                 await this.brazeClient.createContentBlock(contentBlockName, file.content)
@@ -29621,7 +29621,7 @@ async function run() {
 			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
 
-		await deployer.deploy(contentBlockNames)
+		await deployer.deploy(contentBlockNames, contentBlocks)
 
 	} catch (error) {
 		core.setFailed(error.message)

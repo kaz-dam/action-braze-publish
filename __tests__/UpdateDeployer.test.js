@@ -1,12 +1,15 @@
 const core = require('@actions/core')
 const BrazeApiClient = require('../src/BrazeApiClient')
 const UpdateDeployer = require('../src/UpdateDeployer')
+const Logger = require('../src/Logger')
 
 jest.mock('@actions/core')
 jest.mock('../src/BrazeApiClient')
+jest.mock('../src/Logger')
 
 describe('UpdateDeployer', () => {
     let mockBrazeClient
+    let mockLogger
     let updateDeployer
     const mockContentBlocksDir = 'content_blocks'
     const mockOctokit = {
@@ -28,6 +31,12 @@ describe('UpdateDeployer', () => {
             createContentBlock: jest.fn()
         }
         BrazeApiClient.mockImplementation(() => mockBrazeClient)
+
+        mockLogger = {
+            info: jest.fn(),
+            debug: jest.fn()
+        }
+        Logger.mockImplementation(() => mockLogger)
 
         updateDeployer = new UpdateDeployer(mockOctokit, mockBrazeClient, mockOwner, mockRepo, mockBaseSha, mockHeadSha)
 
@@ -60,17 +69,21 @@ describe('UpdateDeployer', () => {
 
     it('should update existing content blocks according to commit history', async () => {
         const existingContentBlocks = ['file1', 'file2']
+        const contentBlocksWithIds = {
+            file1: 'file1Id',
+            file2: 'file2Id'
+        }
 
-        await updateDeployer.deploy(existingContentBlocks)
+        await updateDeployer.deploy(existingContentBlocks, contentBlocksWithIds)
 
-        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockContentBlocksDir}/file1.liquid`)
-        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockContentBlocksDir}/file2.liquid`)
+        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1Id', `Content of ${mockContentBlocksDir}/file1.liquid`)
+        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2Id', `Content of ${mockContentBlocksDir}/file2.liquid`)
     })
     
     it('should create new content blocks according to commit history', async () => {
         const existingContentBlocks = ['file3', 'file4']
 
-        await updateDeployer.deploy(existingContentBlocks)
+        await updateDeployer.deploy(existingContentBlocks, {})
 
         expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockContentBlocksDir}/file1.liquid`)
         expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockContentBlocksDir}/file2.liquid`)

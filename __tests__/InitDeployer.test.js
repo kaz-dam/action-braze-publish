@@ -3,15 +3,25 @@ const path = require('path')
 const BrazeApiClient = require('../src/BrazeApiClient')
 const InitDeployer = require('../src/InitDeployer')
 const Constants = require('../src/Constants')
+const Logger = require('../src/Logger')
 
-jest.mock('fs')
+jest.mock('fs', () => ({
+    promises: {
+        access: jest.fn().mockResolvedValue(),
+    },
+    readdirSync: jest.fn(),
+    statSync: jest.fn(),
+    readFileSync: jest.fn()
+}))
 jest.mock('path')
 jest.mock('../src/BrazeApiClient')
 jest.mock('../src/Constants')
+jest.mock('../src/Logger')
 
 describe('InitDeployer', () => {
     let mockBrazeClient
     let initDeployer
+    let mockLogger
     const mockWorkspacePath = '/mock/workspace'
     const mockContentBlocksDir = 'content_blocks'
     const mockFileExtensions = ['liquid']
@@ -27,6 +37,12 @@ describe('InitDeployer', () => {
             createContentBlock: jest.fn()
         }
         BrazeApiClient.mockImplementation(() => mockBrazeClient)
+
+        mockLogger = {
+            info: jest.fn(),
+            debug: jest.fn()
+        }
+        Logger.mockImplementation(() => mockLogger)
         
         initDeployer = new InitDeployer(mockBrazeClient)
     })
@@ -93,11 +109,15 @@ describe('InitDeployer', () => {
 
         it('should update content blocks that already exist', async () => {
             const mockExistingContentBlocks = ['file1', 'file2']
+            const contentBlocksWithIds = {
+                file1: 'file1Id',
+                file2: 'file2Id'
+            }
 
-            await initDeployer.deploy(mockExistingContentBlocks)
+            await initDeployer.deploy(mockExistingContentBlocks, contentBlocksWithIds)
 
-            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid`)
-            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`)
+            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1Id', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid`)
+            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2Id', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`)
         })
     })
 })

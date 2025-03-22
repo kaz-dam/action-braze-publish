@@ -7,6 +7,10 @@ branding:
 
 # Define your inputs here.
 inputs:
+    BRAZE_CONTENT_BLOCK_PREFIX:
+        description: 'The prefix for the content block name'
+        required: false
+        default: ''
     LOG_LEVEL:
         description: 'Log level when running the action'
         required: false

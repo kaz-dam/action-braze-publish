@@ -15,7 +15,7 @@ class UpdateDeployer extends BaseDeployer {
         Logger.info('Initializing the UpdateDeployer')
     }
 
-    async deploy(existingContentBlocks, contentBlocksWithIds) {
+    async deploy(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
         Logger.info('Deploying content blocks in the update mode')
 
         const response = await this.octokit.rest.repos.compareCommits({
@@ -53,8 +53,10 @@ class UpdateDeployer extends BaseDeployer {
                 await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
                 Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
-                await this.brazeClient.createContentBlock(contentBlockName, file.content)
-                Logger.debug(`Content block ${contentBlockName} created`)
+                const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix)
+
+                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
+                Logger.debug(`Content block ${prefixedContentBlockName} created`)
             }
         }
 

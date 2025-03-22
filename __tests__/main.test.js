@@ -27,7 +27,8 @@ describe('main.js', () => {
 				GITHUB_TOKEN: 'test-token',
 				BRAZE_REST_ENDPOINT: 'https://test.braze.endpoint',
 				BRAZE_API_KEY: 'test-api-key',
-				DEPLOYMENT_MODE: 'init'
+				DEPLOYMENT_MODE: 'init',
+				BRAZE_CONTENT_BLOCK_PREFIX: ''
 			}
 			return inputs[inputName]
 		})
@@ -58,7 +59,7 @@ describe('main.js', () => {
 		mockBrazeClient = {
 			getContentBlocks: jest.fn().mockResolvedValue({
 				block1: 'block_id_1',
-				block2: 'block_id_1'
+				block2: 'block_id_2'
 			})
 		}
 		BrazeApiClient.mockImplementation(() => mockBrazeClient)
@@ -96,7 +97,10 @@ describe('main.js', () => {
 		expect(UpdateDeployer).not.toHaveBeenCalled()
 
 		const initDeployerInstance = InitDeployer.mock.instances[0]
-		expect(initDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'])
+		expect(initDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'], {
+			block1: 'block_id_1',
+			block2: 'block_id_2'
+		}, '')
 	})
 	
 	it('should call UpdateDeployer for "update" deployment mode', async () => {
@@ -106,6 +110,7 @@ describe('main.js', () => {
 				BRAZE_REST_ENDPOINT: 'https://api.braze.com',
 				BRAZE_API_KEY: 'test-api-key',
 				DEPLOYMENT_MODE: 'update',
+				BRAZE_CONTENT_BLOCK_PREFIX: ''
 			};
 			return inputs[inputName];
 		});
@@ -116,7 +121,10 @@ describe('main.js', () => {
 		expect(InitDeployer).not.toHaveBeenCalled()
 
 		const updateDeployerInstance = UpdateDeployer.mock.instances[0]
-		expect(updateDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'])
+		expect(updateDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'], {
+			block1: 'block_id_1',
+			block2: 'block_id_2'
+		}, '')
 	})
 
 	it('should handle errors gracefully', async () => {

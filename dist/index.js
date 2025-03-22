@@ -29200,6 +29200,12 @@ class BaseDeployer {
         this.orderedFiles = []
     }
 
+    addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix) {
+        return brazeContentBlockPrefix ?
+            `${brazeContentBlockPrefix}${contentBlockName}` :
+            contentBlockName
+    }
+
     resolveDependencies(files, existingBlocks) {
         this.createDependencyGraph(files)
 
@@ -29397,7 +29403,7 @@ class InitDeployer extends BaseDeployer {
         Logger.debug(`Workspace path: ${this.workspacePath}`)
     }
 
-    async deploy(existingContentBlocks, contentBlocksWithIds) {
+    async deploy(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
         Logger.info('Deploying content blocks in the init mode')
 
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
@@ -29413,8 +29419,10 @@ class InitDeployer extends BaseDeployer {
                 await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
                 Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
-                await this.brazeClient.createContentBlock(contentBlockName, file.content)
-                Logger.debug(`Content block ${contentBlockName} created`)
+                const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix)
+
+                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
+                Logger.debug(`Content block ${prefixedContentBlockName} created`)
             }
         }
 
@@ -29521,7 +29529,7 @@ class UpdateDeployer extends BaseDeployer {
         Logger.info('Initializing the UpdateDeployer')
     }
 
-    async deploy(existingContentBlocks, contentBlocksWithIds) {
+    async deploy(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
         Logger.info('Deploying content blocks in the update mode')
 
         const response = await this.octokit.rest.repos.compareCommits({
@@ -29559,8 +29567,10 @@ class UpdateDeployer extends BaseDeployer {
                 await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
                 Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
-                await this.brazeClient.createContentBlock(contentBlockName, file.content)
-                Logger.debug(`Content block ${contentBlockName} created`)
+                const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix)
+
+                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
+                Logger.debug(`Content block ${prefixedContentBlockName} created`)
             }
         }
 
@@ -29594,6 +29604,7 @@ async function run() {
 		const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
 		const brazeApiKey = core.getInput('BRAZE_API_KEY')
 		const deploymentMode = core.getInput('DEPLOYMENT_MODE')
+		const brazeContentBlockPrefix = core.getInput('BRAZE_CONTENT_BLOCK_PREFIX')
 
 		const octokit = github.getOctokit(token)
 		const context = github.context
@@ -29621,7 +29632,7 @@ async function run() {
 			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
 
-		await deployer.deploy(contentBlockNames, contentBlocks)
+		await deployer.deploy(contentBlockNames, contentBlocks, brazeContentBlockPrefix)
 
 	} catch (error) {
 		core.setFailed(error.message)

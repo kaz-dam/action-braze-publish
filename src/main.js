@@ -17,6 +17,7 @@ async function run() {
 		const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
 		const brazeApiKey = core.getInput('BRAZE_API_KEY')
 		const deploymentMode = core.getInput('DEPLOYMENT_MODE')
+		const brazeContentBlockPrefix = core.getInput('BRAZE_CONTENT_BLOCK_PREFIX')
 
 		const octokit = github.getOctokit(token)
 		const context = github.context
@@ -44,7 +45,7 @@ async function run() {
 			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
 
-		await deployer.deploy(contentBlockNames, contentBlocks)
+		await deployer.deploy(contentBlockNames, contentBlocks, brazeContentBlockPrefix)
 
 	} catch (error) {
 		core.setFailed(error.message)

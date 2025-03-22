@@ -22,6 +22,17 @@ describe('BaseDeployer', () => {
         jest.resetAllMocks()
     })
 
+    describe('addPrefixToContentBlockName', () => {
+        it('should add a prefix to the content block name', () => {
+            const contentBlockName = 'file1'
+            const prefix = 'prefix_'
+
+            const result = baseDeployer.addPrefixToContentBlockName(contentBlockName, prefix)
+
+            expect(result).toEqual('prefix_file1')
+        })
+    })
+
     describe('resolveDependencies', () => {
         beforeEach(() => {
             jest.spyOn(baseDeployer, 'getContentBlockName').mockImplementation((filePath) => filePath.split('/').pop().split('.').slice(0, -1).join('.'))

@@ -7,6 +7,12 @@ class BaseDeployer {
         this.orderedFiles = []
     }
 
+    addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix) {
+        return brazeContentBlockPrefix ?
+            `${brazeContentBlockPrefix}${contentBlockName}` :
+            contentBlockName
+    }
+
     resolveDependencies(files, existingBlocks) {
         this.createDependencyGraph(files)
 

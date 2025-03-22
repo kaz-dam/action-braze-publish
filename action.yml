@@ -7,6 +7,9 @@ branding:
 
 # Define your inputs here.
 inputs:
+    LOG_LEVEL:
+        description: 'Log level when running the action'
+        required: false
     DEPLOYMENT_MODE:
         description: 'Deployment mode: init or update'
         required: false

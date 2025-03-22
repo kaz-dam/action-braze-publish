@@ -29385,15 +29385,21 @@ const fs = __nccwpck_require__(7147)
 const path = __nccwpck_require__(1017)
 const Constants = __nccwpck_require__(9493)
 const BaseDeployer = __nccwpck_require__(2971)
+const Logger = __nccwpck_require__(7727)
 
 class InitDeployer extends BaseDeployer {
     constructor(brazeClient) {
         super()
         this.brazeClient = brazeClient
         this.workspacePath = process.env.GITHUB_WORKSPACE
+
+        Logger.info('Initializing the InitDeployer')
+        Logger.debug(`Workspace path: ${this.workspacePath}`)
     }
 
     async deploy(existingContentBlocks) {
+        Logger.info('Deploying content blocks in the init mode')
+
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
 
         const resolvedFile = this.resolveDependencies(files, existingContentBlocks)
@@ -29401,12 +29407,18 @@ class InitDeployer extends BaseDeployer {
         for (const file of resolvedFile) {
             const contentBlockName = this.getContentBlockName(file.path)
 
+            Logger.debug(`Processing content block file ${contentBlockName}`)
+
             if (existingContentBlocks.includes(contentBlockName)) {
                 await this.brazeClient.updateContentBlock(contentBlockName, file.content)
+                Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
                 await this.brazeClient.createContentBlock(contentBlockName, file.content)
+                Logger.debug(`Content block ${contentBlockName} created`)
             }
         }
+
+        Logger.info('Content blocks deployed successfully')
     }
 
     getAllFiles(dirPath, files = []) {
@@ -29433,11 +29445,68 @@ module.exports = InitDeployer
 
 /***/ }),
 
+/***/ 7727:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(2186)
+
+class Logger {
+    static initialized = false
+    static logLevelInput
+    static logLevel
+
+    static init() {
+        if (!Logger.initialized) {
+            Logger.logLevelInput = core.getInput('LOG_LEVEL')
+            const isGithubDebug = process.env.ACTIONS_STEP_DEBUG === 'true'
+
+            Logger.logLevel = 'info'
+            
+            if (Logger.logLevelInput && Logger.logLevelInput.trim() !== '' && !isGithubDebug) {
+                Logger.logLevel = Logger.logLevelInput.trim().toLowerCase()
+            }
+            
+            if (isGithubDebug) {
+                Logger.logLevel = 'debug'
+            }
+
+            Logger.initialized = true
+        }
+    }
+
+    static debug(message) {
+        Logger.init()
+        if (Logger.logLevel === 'debug') {
+            core.debug(`DEBUG: ${message}`)
+        }
+    }
+
+    static info(message) {
+        Logger.init()
+        core.info(`INFO: ${message}`)
+    }
+
+    static warn(message) {
+        Logger.init()
+        core.info(`WARNING: ${message}`)
+    }
+
+    static error(message) {
+        Logger.init()
+        core.info(`ERROR: ${message}`)
+    }
+}
+
+module.exports = Logger
+
+/***/ }),
+
 /***/ 3200:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(2186)
 const BaseDeployer = __nccwpck_require__(2971)
+const Logger = __nccwpck_require__(7727)
 
 class UpdateDeployer extends BaseDeployer {
     constructor(octokit, brazeClient, owner, repo, baseSha, headSha) {
@@ -29448,10 +29517,12 @@ class UpdateDeployer extends BaseDeployer {
         this.repo = repo
         this.baseSha = baseSha
         this.headSha = headSha
+
+        Logger.info('Initializing the UpdateDeployer')
     }
 
     async deploy(existingContentBlocks) {
-        core.info('Running Update Mode - Uploading changed or new content blocks.')
+        Logger.info('Deploying content blocks in the update mode')
 
         const response = await this.octokit.rest.repos.compareCommits({
 			owner: this.owner,
@@ -29475,17 +29546,25 @@ class UpdateDeployer extends BaseDeployer {
             }))
         )
 
+        Logger.debug(`Files changed in the commit: ${files.map((file) => file.path).join(', ')}`)
+
         const resolvedFiles = this.resolveDependencies(files, new Set(existingContentBlocks))
 
         for (const file of resolvedFiles) {
             const contentBlockName = this.getContentBlockName(file.path)
 
+            Logger.debug(`Processing content block file ${contentBlockName}`)
+
             if (existingContentBlocks.includes(contentBlockName)) {
                 await this.brazeClient.updateContentBlock(contentBlockName, file.content)
+                Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
                 await this.brazeClient.createContentBlock(contentBlockName, file.content)
+                Logger.debug(`Content block ${contentBlockName} created`)
             }
         }
+
+        Logger.info('Content blocks deployed successfully')
     }
 }
 
@@ -29501,6 +29580,7 @@ const github = __nccwpck_require__(5438)
 const BrazeApiClient = __nccwpck_require__(6623)
 const InitDeployer = __nccwpck_require__(146)
 const UpdateDeployer = __nccwpck_require__(3200)
+const Logger = __nccwpck_require__(7727)
 
 /**
  * The main function for the action.
@@ -29508,6 +29588,8 @@ const UpdateDeployer = __nccwpck_require__(3200)
  */
 async function run() {
 	try {
+		Logger.info('Starting the action')
+
 		const token = core.getInput('GITHUB_TOKEN')
 		const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
 		const brazeApiKey = core.getInput('BRAZE_API_KEY')
@@ -29525,11 +29607,17 @@ async function run() {
 		const contentBlocks = await brazeClient.getContentBlocks()
 		const contentBlockNames = Object.keys(contentBlocks)
 
+		Logger.info(`Existing content blocks on the instance: ${contentBlockNames.join(', ')}`)
+
 		let deployer;
 
 		if (deploymentMode === 'init') {
+			Logger.debug('Using the init deployer')
+
 			deployer = new InitDeployer(brazeClient)
 		} else {
+			Logger.debug('Using the update deployer')
+
 			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
 

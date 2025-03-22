@@ -3,6 +3,7 @@ const github = require('@actions/github')
 const BrazeApiClient = require('./BrazeApiClient')
 const InitDeployer = require('./InitDeployer')
 const UpdateDeployer = require('./UpdateDeployer')
+const Logger = require('./Logger')
 
 /**
  * The main function for the action.
@@ -10,6 +11,8 @@ const UpdateDeployer = require('./UpdateDeployer')
  */
 async function run() {
 	try {
+		Logger.info('Starting the action')
+
 		const token = core.getInput('GITHUB_TOKEN')
 		const brazeRestEndpoint = core.getInput('BRAZE_REST_ENDPOINT')
 		const brazeApiKey = core.getInput('BRAZE_API_KEY')
@@ -27,11 +30,17 @@ async function run() {
 		const contentBlocks = await brazeClient.getContentBlocks()
 		const contentBlockNames = Object.keys(contentBlocks)
 
+		Logger.info(`Existing content blocks on the instance: ${contentBlockNames.join(', ')}`)
+
 		let deployer;
 
 		if (deploymentMode === 'init') {
+			Logger.debug('Using the init deployer')
+
 			deployer = new InitDeployer(brazeClient)
 		} else {
+			Logger.debug('Using the update deployer')
+
 			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
 

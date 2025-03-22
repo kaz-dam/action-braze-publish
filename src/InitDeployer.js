@@ -2,15 +2,21 @@ const fs = require('fs')
 const path = require('path')
 const Constants = require('./Constants')
 const BaseDeployer = require('./BaseDeployer')
+const Logger = require('./Logger')
 
 class InitDeployer extends BaseDeployer {
     constructor(brazeClient) {
         super()
         this.brazeClient = brazeClient
         this.workspacePath = process.env.GITHUB_WORKSPACE
+
+        Logger.info('Initializing the InitDeployer')
+        Logger.debug(`Workspace path: ${this.workspacePath}`)
     }
 
     async deploy(existingContentBlocks) {
+        Logger.info('Deploying content blocks in the init mode')
+
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
 
         const resolvedFile = this.resolveDependencies(files, existingContentBlocks)
@@ -18,12 +24,18 @@ class InitDeployer extends BaseDeployer {
         for (const file of resolvedFile) {
             const contentBlockName = this.getContentBlockName(file.path)
 
+            Logger.debug(`Processing content block file ${contentBlockName}`)
+
             if (existingContentBlocks.includes(contentBlockName)) {
                 await this.brazeClient.updateContentBlock(contentBlockName, file.content)
+                Logger.debug(`Content block ${contentBlockName} updated`)
             } else {
                 await this.brazeClient.createContentBlock(contentBlockName, file.content)
+                Logger.debug(`Content block ${contentBlockName} created`)
             }
         }
+
+        Logger.info('Content blocks deployed successfully')
     }
 
     getAllFiles(dirPath, files = []) {

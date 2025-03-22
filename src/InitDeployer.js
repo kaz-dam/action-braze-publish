@@ -14,28 +14,12 @@ class InitDeployer extends BaseDeployer {
         Logger.debug(`Workspace path: ${this.workspacePath}`)
     }
 
-    async deploy(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
+    async deploy() {
         Logger.info('Deploying content blocks in the init mode')
 
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
 
-        const resolvedFile = this.resolveDependencies(files, existingContentBlocks)
-
-        for (const file of resolvedFile) {
-            const contentBlockName = this.getContentBlockName(file.path)
-
-            Logger.debug(`Processing content block file ${contentBlockName}`)
-
-            if (existingContentBlocks.includes(contentBlockName)) {
-                await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
-                Logger.debug(`Content block ${contentBlockName} updated`)
-            } else {
-                const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix)
-
-                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
-                Logger.debug(`Content block ${prefixedContentBlockName} created`)
-            }
-        }
+        this.publishFiles(files)
 
         Logger.info('Content blocks deployed successfully')
     }

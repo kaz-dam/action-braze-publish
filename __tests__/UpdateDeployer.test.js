@@ -25,6 +25,12 @@ describe('UpdateDeployer', () => {
     const mockBaseSha = 'mockBaseSha'
     const mockHeadSha = 'mockHeadSha'
 
+    const existingContentBlocks = ['file1', 'file2']
+    const contentBlocksWithIds = {
+        file1: 'file1Id',
+        file2: 'file2Id'
+    }
+
     beforeEach(() => {
         mockBrazeClient = {
             updateContentBlock: jest.fn(),
@@ -39,6 +45,8 @@ describe('UpdateDeployer', () => {
         Logger.mockImplementation(() => mockLogger)
 
         updateDeployer = new UpdateDeployer(mockOctokit, mockBrazeClient, mockOwner, mockRepo, mockBaseSha, mockHeadSha)
+
+        updateDeployer.setContentBlockProperties(existingContentBlocks, contentBlocksWithIds, 'prefix_')
 
         mockOctokit.rest.repos.compareCommits.mockResolvedValue({
             data: {
@@ -61,31 +69,17 @@ describe('UpdateDeployer', () => {
         ])
 
         jest.spyOn(updateDeployer, 'getContentBlockName').mockImplementation((filePath) => filePath.split('/').pop().split('.').slice(0, -1).join('.'))
+
+        jest.spyOn(updateDeployer, 'publishFiles')
     })
 
     afterEach(() => {
         jest.resetAllMocks()
     })
 
-    it('should update existing content blocks according to commit history', async () => {
-        const existingContentBlocks = ['file1', 'file2']
-        const contentBlocksWithIds = {
-            file1: 'file1Id',
-            file2: 'file2Id'
-        }
+    it('should call the publish method', async () => {
+        await updateDeployer.deploy()
 
-        await updateDeployer.deploy(existingContentBlocks, contentBlocksWithIds)
-
-        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1Id', `Content of ${mockContentBlocksDir}/file1.liquid`)
-        expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2Id', `Content of ${mockContentBlocksDir}/file2.liquid`)
-    })
-    
-    it('should create new content blocks according to commit history', async () => {
-        const existingContentBlocks = ['file3', 'file4']
-
-        await updateDeployer.deploy(existingContentBlocks, {})
-
-        expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockContentBlocksDir}/file1.liquid`)
-        expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockContentBlocksDir}/file2.liquid`)
+        expect(updateDeployer.publishFiles).toHaveBeenCalled()
     })
 })

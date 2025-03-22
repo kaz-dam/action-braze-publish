@@ -29189,7 +29189,9 @@ function wrappy (fn, cb) {
 /***/ }),
 
 /***/ 2971:
-/***/ ((module) => {
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const Logger = __nccwpck_require__(7727)
 
 class BaseDeployer {
     constructor(brazeClient) {
@@ -29198,12 +29200,41 @@ class BaseDeployer {
         this.resolved = new Set()
         this.dependencyGraph = new Map()
         this.orderedFiles = []
+
+        this.existingContentBlocks = []
+        this.contentBlocksWithIds = {}
+        this.brazeContentBlockPrefix = ''
     }
 
     addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix) {
         return brazeContentBlockPrefix ?
             `${brazeContentBlockPrefix}${contentBlockName}` :
             contentBlockName
+    }
+
+    async publishFiles(files) {
+        const resolvedFiles = this.resolveDependencies(files, this.existingContentBlocks)
+
+        for (const file of resolvedFiles) {
+            const contentBlockName = this.getContentBlockName(file.path)
+            const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, this.brazeContentBlockPrefix)
+
+            Logger.debug(`Processing content block file ${prefixedContentBlockName}`)
+
+            if (this.existingContentBlocks.includes(prefixedContentBlockName)) {
+                await this.brazeClient.updateContentBlock(this.contentBlocksWithIds[prefixedContentBlockName], file.content)
+                Logger.debug(`Content block ${prefixedContentBlockName} updated`)
+            } else {
+                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
+                Logger.debug(`Content block ${prefixedContentBlockName} created`)
+            }
+        }
+    }
+
+    setContentBlockProperties(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
+        this.existingContentBlocks = existingContentBlocks
+        this.contentBlocksWithIds = contentBlocksWithIds
+        this.brazeContentBlockPrefix = brazeContentBlockPrefix
     }
 
     resolveDependencies(files, existingBlocks) {
@@ -29403,28 +29434,12 @@ class InitDeployer extends BaseDeployer {
         Logger.debug(`Workspace path: ${this.workspacePath}`)
     }
 
-    async deploy(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
+    async deploy() {
         Logger.info('Deploying content blocks in the init mode')
 
         const files = this.getAllFiles(path.join(this.workspacePath, Constants.CONTENT_BLOCKS_DIR))
 
-        const resolvedFile = this.resolveDependencies(files, existingContentBlocks)
-
-        for (const file of resolvedFile) {
-            const contentBlockName = this.getContentBlockName(file.path)
-
-            Logger.debug(`Processing content block file ${contentBlockName}`)
-
-            if (existingContentBlocks.includes(contentBlockName)) {
-                await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
-                Logger.debug(`Content block ${contentBlockName} updated`)
-            } else {
-                const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix)
-
-                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
-                Logger.debug(`Content block ${prefixedContentBlockName} created`)
-            }
-        }
+        this.publishFiles(files)
 
         Logger.info('Content blocks deployed successfully')
     }
@@ -29512,7 +29527,6 @@ module.exports = Logger
 /***/ 3200:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const core = __nccwpck_require__(2186)
 const BaseDeployer = __nccwpck_require__(2971)
 const Logger = __nccwpck_require__(7727)
 
@@ -29529,7 +29543,7 @@ class UpdateDeployer extends BaseDeployer {
         Logger.info('Initializing the UpdateDeployer')
     }
 
-    async deploy(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
+    async deploy() {
         Logger.info('Deploying content blocks in the update mode')
 
         const response = await this.octokit.rest.repos.compareCommits({
@@ -29556,23 +29570,7 @@ class UpdateDeployer extends BaseDeployer {
 
         Logger.debug(`Files changed in the commit: ${files.map((file) => file.path).join(', ')}`)
 
-        const resolvedFiles = this.resolveDependencies(files, new Set(existingContentBlocks))
-
-        for (const file of resolvedFiles) {
-            const contentBlockName = this.getContentBlockName(file.path)
-
-            Logger.debug(`Processing content block file ${contentBlockName}`)
-
-            if (existingContentBlocks.includes(contentBlockName)) {
-                await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
-                Logger.debug(`Content block ${contentBlockName} updated`)
-            } else {
-                const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix)
-
-                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
-                Logger.debug(`Content block ${prefixedContentBlockName} created`)
-            }
-        }
+        this.publishFiles(files)
 
         Logger.info('Content blocks deployed successfully')
     }
@@ -29632,7 +29630,9 @@ async function run() {
 			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
 
-		await deployer.deploy(contentBlockNames, contentBlocks, brazeContentBlockPrefix)
+		deployer.setContentBlockProperties(contentBlockNames, contentBlocks, brazeContentBlockPrefix)
+
+		await deployer.deploy()
 
 	} catch (error) {
 		core.setFailed(error.message)

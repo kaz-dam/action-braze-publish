@@ -33,6 +33,49 @@ describe('BaseDeployer', () => {
         })
     })
 
+    describe('publishFiles', () => {
+        beforeEach(() => {
+            baseDeployer.setContentBlockProperties(['file1'], { file1: 'id1' }, '')
+        })
+
+        it('should update existing content blocks and create new ones', async () => {
+            const mockFiles = [
+                { path: `${mockContentBlocksDir}/file1.liquid`, content: 'Content of file1.liquid' },
+                { path: `${mockContentBlocksDir}/file2.liquid`, content: 'Content of file2.liquid' }
+            ]
+
+            await baseDeployer.publishFiles(mockFiles)
+
+            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('id1', 'Content of file1.liquid')
+            expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file2', 'Content of file2.liquid')
+        })
+    })
+
+    describe('setContentBlockProperties', () => {
+        it('should set the existing content blocks, content block ids, and with prefix', () => {
+            const existingContentBlocks = ['file1']
+            const contentBlocksWithIds = { file1: 'id1' }
+            const prefix = 'prefix_'
+
+            baseDeployer.setContentBlockProperties(existingContentBlocks, contentBlocksWithIds, prefix)
+
+            expect(baseDeployer.existingContentBlocks).toEqual(existingContentBlocks)
+            expect(baseDeployer.contentBlocksWithIds).toEqual(contentBlocksWithIds)
+            expect(baseDeployer.brazeContentBlockPrefix).toEqual(prefix)
+        })
+        
+        it('should set the existing content blocks, content block ids, and without prefix', () => {
+            const existingContentBlocks = ['file1']
+            const contentBlocksWithIds = { file1: 'id1' }
+
+            baseDeployer.setContentBlockProperties(existingContentBlocks, contentBlocksWithIds)
+
+            expect(baseDeployer.existingContentBlocks).toEqual(existingContentBlocks)
+            expect(baseDeployer.contentBlocksWithIds).toEqual(contentBlocksWithIds)
+            expect(baseDeployer.brazeContentBlockPrefix).toEqual('')
+        })
+    })
+
     describe('resolveDependencies', () => {
         beforeEach(() => {
             jest.spyOn(baseDeployer, 'getContentBlockName').mockImplementation((filePath) => filePath.split('/').pop().split('.').slice(0, -1).join('.'))

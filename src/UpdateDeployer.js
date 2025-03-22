@@ -1,4 +1,3 @@
-const core = require('@actions/core')
 const BaseDeployer = require('./BaseDeployer')
 const Logger = require('./Logger')
 
@@ -15,7 +14,7 @@ class UpdateDeployer extends BaseDeployer {
         Logger.info('Initializing the UpdateDeployer')
     }
 
-    async deploy(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
+    async deploy() {
         Logger.info('Deploying content blocks in the update mode')
 
         const response = await this.octokit.rest.repos.compareCommits({
@@ -42,23 +41,7 @@ class UpdateDeployer extends BaseDeployer {
 
         Logger.debug(`Files changed in the commit: ${files.map((file) => file.path).join(', ')}`)
 
-        const resolvedFiles = this.resolveDependencies(files, new Set(existingContentBlocks))
-
-        for (const file of resolvedFiles) {
-            const contentBlockName = this.getContentBlockName(file.path)
-
-            Logger.debug(`Processing content block file ${contentBlockName}`)
-
-            if (existingContentBlocks.includes(contentBlockName)) {
-                await this.brazeClient.updateContentBlock(contentBlocksWithIds[contentBlockName], file.content)
-                Logger.debug(`Content block ${contentBlockName} updated`)
-            } else {
-                const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix)
-
-                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
-                Logger.debug(`Content block ${prefixedContentBlockName} created`)
-            }
-        }
+        this.publishFiles(files)
 
         Logger.info('Content blocks deployed successfully')
     }

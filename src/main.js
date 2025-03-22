@@ -45,7 +45,9 @@ async function run() {
 			deployer = new UpdateDeployer(octokit, brazeClient, owner, repo, baseSha, headSha)
 		}
 
-		await deployer.deploy(contentBlockNames, contentBlocks, brazeContentBlockPrefix)
+		deployer.setContentBlockProperties(contentBlockNames, contentBlocks, brazeContentBlockPrefix)
+
+		await deployer.deploy()
 
 	} catch (error) {
 		core.setFailed(error.message)

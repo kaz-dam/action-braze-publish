@@ -97,10 +97,7 @@ describe('main.js', () => {
 		expect(UpdateDeployer).not.toHaveBeenCalled()
 
 		const initDeployerInstance = InitDeployer.mock.instances[0]
-		expect(initDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'], {
-			block1: 'block_id_1',
-			block2: 'block_id_2'
-		}, '')
+		expect(initDeployerInstance.deploy).toHaveBeenCalled()
 	})
 	
 	it('should call UpdateDeployer for "update" deployment mode', async () => {
@@ -121,16 +118,14 @@ describe('main.js', () => {
 		expect(InitDeployer).not.toHaveBeenCalled()
 
 		const updateDeployerInstance = UpdateDeployer.mock.instances[0]
-		expect(updateDeployerInstance.deploy).toHaveBeenCalledWith(['block1', 'block2'], {
-			block1: 'block_id_1',
-			block2: 'block_id_2'
-		}, '')
+		expect(updateDeployerInstance.deploy).toHaveBeenCalled()
 	})
 
 	it('should handle errors gracefully', async () => {
 		const errorMessage = 'Something went wrong'
 		InitDeployer.mockImplementation(() => ({
-			deploy: jest.fn().mockRejectedValue(new Error(errorMessage))
+			deploy: jest.fn().mockRejectedValue(new Error(errorMessage)),
+			setContentBlockProperties: jest.fn()
 		}))
 
 		await run()

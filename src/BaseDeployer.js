@@ -1,3 +1,5 @@
+const Logger = require('./Logger')
+
 class BaseDeployer {
     constructor(brazeClient) {
         this.brazeClient = brazeClient
@@ -5,12 +7,41 @@ class BaseDeployer {
         this.resolved = new Set()
         this.dependencyGraph = new Map()
         this.orderedFiles = []
+
+        this.existingContentBlocks = []
+        this.contentBlocksWithIds = {}
+        this.brazeContentBlockPrefix = ''
     }
 
     addPrefixToContentBlockName(contentBlockName, brazeContentBlockPrefix) {
         return brazeContentBlockPrefix ?
             `${brazeContentBlockPrefix}${contentBlockName}` :
             contentBlockName
+    }
+
+    async publishFiles(files) {
+        const resolvedFiles = this.resolveDependencies(files, this.existingContentBlocks)
+
+        for (const file of resolvedFiles) {
+            const contentBlockName = this.getContentBlockName(file.path)
+            const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, this.brazeContentBlockPrefix)
+
+            Logger.debug(`Processing content block file ${prefixedContentBlockName}`)
+
+            if (this.existingContentBlocks.includes(prefixedContentBlockName)) {
+                await this.brazeClient.updateContentBlock(this.contentBlocksWithIds[prefixedContentBlockName], file.content)
+                Logger.debug(`Content block ${prefixedContentBlockName} updated`)
+            } else {
+                await this.brazeClient.createContentBlock(prefixedContentBlockName, file.content)
+                Logger.debug(`Content block ${prefixedContentBlockName} created`)
+            }
+        }
+    }
+
+    setContentBlockProperties(existingContentBlocks, contentBlocksWithIds, brazeContentBlockPrefix = '') {
+        this.existingContentBlocks = existingContentBlocks
+        this.contentBlocksWithIds = contentBlocksWithIds
+        this.brazeContentBlockPrefix = brazeContentBlockPrefix
     }
 
     resolveDependencies(files, existingBlocks) {

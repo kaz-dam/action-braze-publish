@@ -96,28 +96,14 @@ describe('InitDeployer', () => {
                 { path: `${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`, content: `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid` }
             ])
             jest.spyOn(initDeployer, 'getContentBlockName').mockImplementation((filePath) => filePath.split('/').pop().split('.').slice(0, -1).join('.'))
+
+            jest.spyOn(initDeployer, 'publishFiles').mockImplementation(() => {})
         })
 
-        it('should create content blocks that do not exist', async () => {
-            const mockExistingContentBlocks = ['file3', 'file4']
+        it('should call the publish method', async () => {
+            await initDeployer.deploy()
 
-            await initDeployer.deploy(mockExistingContentBlocks)
-
-            expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file1', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid`)
-            expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file2', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`)
-        })
-
-        it('should update content blocks that already exist', async () => {
-            const mockExistingContentBlocks = ['file1', 'file2']
-            const contentBlocksWithIds = {
-                file1: 'file1Id',
-                file2: 'file2Id'
-            }
-
-            await initDeployer.deploy(mockExistingContentBlocks, contentBlocksWithIds)
-
-            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file1Id', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file1.liquid`)
-            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('file2Id', `Content of ${mockWorkspacePath}/${mockContentBlocksDir}/file2.liquid`)
+            expect(initDeployer.publishFiles).toHaveBeenCalled()
         })
     })
 })

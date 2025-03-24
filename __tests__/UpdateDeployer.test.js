@@ -82,4 +82,26 @@ describe('UpdateDeployer', () => {
 
         expect(updateDeployer.publishFiles).toHaveBeenCalled()
     })
+    
+    it('should skip not expected file content in github response', async () => {
+        mockOctokit.rest.repos.getContent.mockImplementation(({ path }) => {
+            if (path === `${mockContentBlocksDir}/file2.liquid`) {
+                return {
+                    data: []
+                }
+            } else {
+                return {
+                    data: {
+                        content: Buffer.from(`Content of ${path}`).toString('base64')
+                    }
+                }
+            }
+        })
+
+        await updateDeployer.deploy()
+
+        expect(updateDeployer.publishFiles).toHaveBeenCalledWith([
+            { path: `${mockContentBlocksDir}/file1.liquid`, content: `Content of ${mockContentBlocksDir}/file1.liquid` }
+        ])
+    })
 })

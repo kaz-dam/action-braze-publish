@@ -24,7 +24,7 @@ class UpdateDeployer extends BaseDeployer {
 			head: this.headSha
 		})
 
-        const files = await Promise.all(
+        const files = (await Promise.all(
             response.data.files.map(async (file) => {
                 const fileContentResponse = await this.octokit.rest.repos.getContent({
                     owner: this.owner,
@@ -44,7 +44,7 @@ class UpdateDeployer extends BaseDeployer {
                     content: fileContent
                 }
             })
-        )
+        )).filter(Boolean)
 
         Logger.debug(`Files changed in the commit: ${files.map((file) => file.path).join(', ')}`)
 

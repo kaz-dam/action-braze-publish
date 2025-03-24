@@ -29553,20 +29553,27 @@ class UpdateDeployer extends BaseDeployer {
 			head: this.headSha
 		})
 
-        const files = await Promise.all(
-            response.data.files.map(async (file) => ({
-                path: file.filename,
-                content: Buffer.from((
-                    await this.octokit.rest.repos.getContent({
-                        owner: this.owner,
-                        repo: this.repo,
-                        path: file.filename,
-                        ref: this.headSha
-                    }).data.content,
-                    'base64'
-                )).toString('utf8')
-            }))
-        )
+        const files = (await Promise.all(
+            response.data.files.map(async (file) => {
+                const fileContentResponse = await this.octokit.rest.repos.getContent({
+                    owner: this.owner,
+                    repo: this.repo,
+                    path: file.filename,
+                    ref: this.headSha
+                })
+
+                if (Array.isArray(fileContentResponse.data) && fileContentResponse.data.type !== 'file') {
+                    return
+                }
+
+                const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf8')
+
+                return {
+                    path: file.filename,
+                    content: fileContent
+                }
+            })
+        )).filter(Boolean)
 
         Logger.debug(`Files changed in the commit: ${files.map((file) => file.path).join(', ')}`)
 

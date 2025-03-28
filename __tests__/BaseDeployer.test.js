@@ -49,6 +49,18 @@ describe('BaseDeployer', () => {
             expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('id1', 'Content of file1.liquid')
             expect(mockBrazeClient.createContentBlock).toHaveBeenCalledWith('file2', 'Content of file2.liquid')
         })
+        
+        it('should skip the files that are not content blocks', async () => {
+            const mockFiles = [
+                { path: `${mockContentBlocksDir}/file1.liquid`, content: 'Content of file1.liquid' },
+                { path: `.github/workflows/file2.json`, content: 'Content of file2.json' }
+            ]
+
+            await baseDeployer.publishFiles(mockFiles)
+
+            expect(mockBrazeClient.updateContentBlock).toHaveBeenCalledWith('id1', 'Content of file1.liquid')
+            expect(mockBrazeClient.createContentBlock).not.toHaveBeenCalledWith()
+        })
     })
 
     describe('setContentBlockProperties', () => {

@@ -26,6 +26,11 @@ class BaseDeployer {
             const contentBlockName = this.getContentBlockName(file.path)
             const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, this.brazeContentBlockPrefix)
 
+            if (!file.path.includes('content_blocks') && !file.path.includes('.liquid')) {
+                Logger.debug(`Skipping file ${file.path}`)
+                continue
+            }
+
             Logger.debug(`Processing content block file ${prefixedContentBlockName}`)
 
             if (this.existingContentBlocks.includes(prefixedContentBlockName)) {

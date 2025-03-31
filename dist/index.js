@@ -29557,7 +29557,7 @@ class UpdateDeployer extends BaseDeployer {
 
         const files = (await Promise.all(
             response.data.files
-                .filter(file => file.filename.includes('content_blocks') && Constants.FILE_EXTENSIONS.includes(file.filename.split('.').pop()))
+                .filter(file => file.filename.includes('content_blocks') && !file.filename.includes('.history') && Constants.FILE_EXTENSIONS.includes(file.filename.split('.').pop()))
                 .map(async (file) => {
                     Logger.debug(`Getting content of file: ${file.filename}`)
 

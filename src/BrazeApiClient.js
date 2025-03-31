@@ -11,9 +11,9 @@ class BrazeApiClient {
 		}
 	}
 
-	async getContentBlocks() {
+	async getContentBlocks(limit = 1000) {
 		const contentBlocksResponse = await this.httpClient.get(
-			`${this.brazeRestEndpoint}/content_blocks/list`,
+			`${this.brazeRestEndpoint}/content_blocks/list?limit=${limit}`,
 			this.requestHeaders
 		)
 

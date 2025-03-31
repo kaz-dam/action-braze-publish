@@ -29561,6 +29561,8 @@ class UpdateDeployer extends BaseDeployer {
 
         const files = (await Promise.all(
             response.data.files.map(async (file) => {
+                Logger.debug(`Getting content of file: ${file.filename}`)
+
                 const fileContentResponse = await this.octokit.rest.repos.getContent({
                     owner: this.owner,
                     repo: this.repo,

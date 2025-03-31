@@ -29219,11 +29219,6 @@ class BaseDeployer {
             const contentBlockName = this.getContentBlockName(file.path)
             const prefixedContentBlockName = this.addPrefixToContentBlockName(contentBlockName, this.brazeContentBlockPrefix)
 
-            if (!file.path.includes('content_blocks') && !file.path.includes('.liquid')) {
-                Logger.debug(`Skipping file ${file.path}`)
-                continue
-            }
-
             Logger.debug(`Processing content block file ${prefixedContentBlockName}`)
 
             if (this.existingContentBlocks.includes(prefixedContentBlockName)) {
@@ -29535,6 +29530,7 @@ module.exports = Logger
 
 const BaseDeployer = __nccwpck_require__(2971)
 const Logger = __nccwpck_require__(7727)
+const Constants = __nccwpck_require__(9493)
 
 class UpdateDeployer extends BaseDeployer {
     constructor(octokit, brazeClient, owner, repo, baseSha, headSha) {

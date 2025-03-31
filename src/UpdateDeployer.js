@@ -1,5 +1,6 @@
 const BaseDeployer = require('./BaseDeployer')
 const Logger = require('./Logger')
+const Constants = require('./Constants')
 
 class UpdateDeployer extends BaseDeployer {
     constructor(octokit, brazeClient, owner, repo, baseSha, headSha) {

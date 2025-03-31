@@ -26,9 +26,9 @@ class Logger {
 
     static debug(message) {
         Logger.init()
-        if (Logger.logLevel === 'debug') {
-            core.debug(`DEBUG: ${message}`)
-        }
+        // if (Logger.logLevel === 'debug') {
+            core.info(`DEBUG: ${message}`)
+        // }
     }
 
     static info(message) {

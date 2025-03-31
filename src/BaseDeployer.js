@@ -67,6 +67,7 @@ class BaseDeployer {
         for (const dependency of dependencies) {
             if (this.resolved.has(dependency) && existingContentBlocks.includes(dependency)) continue
             
+            // TODO: re-visit the dependency check if there are prefixed content blocks
             if (!this.fileMap.has(dependency)) {
                 throw new Error(`Referenced content block '${dependency}' does not exist in the repository or Braze.`)
             }

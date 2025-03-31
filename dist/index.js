@@ -29560,27 +29560,29 @@ class UpdateDeployer extends BaseDeployer {
 		})
 
         const files = (await Promise.all(
-            response.data.files.map(async (file) => {
-                Logger.debug(`Getting content of file: ${file.filename}`)
+            response.data.files
+                .filter(file => file.filename.includes('content_blocks') && Constants.FILE_EXTENSIONS.includes(file.filename.split('.').pop()))
+                .map(async (file) => {
+                    Logger.debug(`Getting content of file: ${file.filename}`)
 
-                const fileContentResponse = await this.octokit.rest.repos.getContent({
-                    owner: this.owner,
-                    repo: this.repo,
-                    path: file.filename,
-                    ref: this.headSha
+                    const fileContentResponse = await this.octokit.rest.repos.getContent({
+                        owner: this.owner,
+                        repo: this.repo,
+                        path: file.filename,
+                        ref: this.headSha
+                    })
+
+                    if (Array.isArray(fileContentResponse.data) && fileContentResponse.data.type !== 'file') {
+                        return
+                    }
+
+                    const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf8')
+
+                    return {
+                        path: file.filename,
+                        content: fileContent
+                    }
                 })
-
-                if (Array.isArray(fileContentResponse.data) && fileContentResponse.data.type !== 'file') {
-                    return
-                }
-
-                const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf8')
-
-                return {
-                    path: file.filename,
-                    content: fileContent
-                }
-            })
         )).filter(Boolean)
 
         Logger.debug(`Files changed in the commit: ${files.map((file) => file.path).join(', ')}`)

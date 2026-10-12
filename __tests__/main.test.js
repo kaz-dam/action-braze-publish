@@ -12,17 +12,20 @@ jest.mock('../src/InitDeployer')
 jest.mock('../src/UpdateDeployer')
 
 describe('main.js', () => {
-	let mockGetInput,
-		mockGetOctokit,
-		mockContext,
-		mockBrazeClient,
-		mockInitDeployer,
-		mockUpdateDeployer
+	let mockGetInput
+	let mockGetOctokit
+	let mockContext
+	let mockBrazeClient
+	let mockInitDeployer
+	let mockUpdateDeployer
+
+	const originalBaseRef = process.env.GITHUB_BASE_REF
 
 	beforeEach(() => {
+		delete process.env.GITHUB_BASE_REF
 		jest.spyOn(core, 'setFailed')
 		mockGetInput = jest.spyOn(core, 'getInput')
-		mockGetInput.mockImplementation((inputName) => {
+		mockGetInput.mockImplementation(inputName => {
 			const inputs = {
 				GITHUB_TOKEN: 'test-token',
 				BRAZE_REST_ENDPOINT: 'https://test.braze.endpoint',
@@ -53,7 +56,8 @@ describe('main.js', () => {
 				}
 			}
 		}
-		mockGetOctokit = jest.spyOn(github, 'getOctokit')
+		mockGetOctokit = jest
+			.spyOn(github, 'getOctokit')
 			.mockReturnValue(mockGetOctokit)
 
 		mockBrazeClient = {
@@ -80,13 +84,21 @@ describe('main.js', () => {
 	})
 
 	afterEach(() => {
+		if (originalBaseRef === undefined) {
+			delete process.env.GITHUB_BASE_REF
+		} else {
+			process.env.GITHUB_BASE_REF = originalBaseRef
+		}
 		jest.resetAllMocks()
 	})
 
 	it('should instantiate BrazeApiClient with the correct arguments', async () => {
 		await run()
 
-		expect(BrazeApiClient).toHaveBeenCalledWith('test-api-key', 'https://test.braze.endpoint')
+		expect(BrazeApiClient).toHaveBeenCalledWith(
+			'test-api-key',
+			'https://test.braze.endpoint'
+		)
 		expect(mockBrazeClient.getContentBlocks).toHaveBeenCalled()
 	})
 
@@ -99,26 +111,112 @@ describe('main.js', () => {
 		const initDeployerInstance = InitDeployer.mock.instances[0]
 		expect(initDeployerInstance.deploy).toHaveBeenCalled()
 	})
-	
+
 	it('should call UpdateDeployer for "update" deployment mode', async () => {
-		mockGetInput.mockImplementation((inputName) => {
+		mockGetInput.mockImplementation(inputName => {
 			const inputs = {
 				GITHUB_TOKEN: 'test-token',
 				BRAZE_REST_ENDPOINT: 'https://api.braze.com',
 				BRAZE_API_KEY: 'test-api-key',
 				DEPLOYMENT_MODE: 'update',
 				BRAZE_CONTENT_BLOCK_PREFIX: ''
-			};
-			return inputs[inputName];
-		});
+			}
+			return inputs[inputName]
+		})
 
 		await run()
 
-		expect(UpdateDeployer).toHaveBeenCalledWith(github.getOctokit('test-token'), mockBrazeClient, 'test-owner', 'test-repo', 'base-sha', 'head-sha')
+		expect(UpdateDeployer).toHaveBeenCalledWith(
+			github.getOctokit('test-token'),
+			mockBrazeClient,
+			'test-owner',
+			'test-repo',
+			'base-sha',
+			'head-sha'
+		)
 		expect(InitDeployer).not.toHaveBeenCalled()
 
 		const updateDeployerInstance = UpdateDeployer.mock.instances[0]
 		expect(updateDeployerInstance.deploy).toHaveBeenCalled()
+	})
+
+	it('should create prod content blocks when the push branch is stage', async () => {
+		mockContext.ref = 'refs/heads/stage'
+		mockGetInput.mockImplementation(inputName => {
+			const inputs = {
+				GITHUB_TOKEN: 'test-token',
+				BRAZE_REST_ENDPOINT: 'https://api.braze.com',
+				BRAZE_API_KEY: 'test-api-key',
+				DEPLOYMENT_MODE: 'update',
+				BRAZE_CONTENT_BLOCK_PREFIX: 'STAGE_'
+			}
+			return inputs[inputName]
+		})
+
+		await run()
+
+		const updateDeployerInstance = UpdateDeployer.mock.instances[0]
+		expect(
+			updateDeployerInstance.setContentBlockProperties
+		).toHaveBeenCalledWith(
+			['block1', 'block2'],
+			{ block1: 'block_id_1', block2: 'block_id_2' },
+			'STAGE_',
+			true
+		)
+	})
+
+	it('should create prod content blocks when the pull request base branch is stage', async () => {
+		mockContext.ref = 'refs/pull/12/merge'
+		mockContext.payload.pull_request = { base: { ref: 'stage' } }
+		mockGetInput.mockImplementation(inputName => {
+			const inputs = {
+				GITHUB_TOKEN: 'test-token',
+				BRAZE_REST_ENDPOINT: 'https://api.braze.com',
+				BRAZE_API_KEY: 'test-api-key',
+				DEPLOYMENT_MODE: 'update',
+				BRAZE_CONTENT_BLOCK_PREFIX: 'STAGE_'
+			}
+			return inputs[inputName]
+		})
+
+		await run()
+
+		const updateDeployerInstance = UpdateDeployer.mock.instances[0]
+		expect(
+			updateDeployerInstance.setContentBlockProperties
+		).toHaveBeenCalledWith(
+			['block1', 'block2'],
+			{ block1: 'block_id_1', block2: 'block_id_2' },
+			'STAGE_',
+			true
+		)
+	})
+
+	it('should not create prod content blocks when the base branch is not stage', async () => {
+		mockContext.ref = 'refs/heads/main'
+		mockGetInput.mockImplementation(inputName => {
+			const inputs = {
+				GITHUB_TOKEN: 'test-token',
+				BRAZE_REST_ENDPOINT: 'https://api.braze.com',
+				BRAZE_API_KEY: 'test-api-key',
+				DEPLOYMENT_MODE: 'update',
+				BRAZE_CONTENT_BLOCK_PREFIX: ''
+			}
+			return inputs[inputName]
+		})
+
+		await run()
+
+		const updateDeployerInstance = UpdateDeployer.mock.instances[0]
+		expect(
+			updateDeployerInstance.setContentBlockProperties
+		).toHaveBeenCalledWith(
+			['block1', 'block2'],
+			{ block1: 'block_id_1', block2: 'block_id_2' },
+			'',
+			false
+		)
 	})
 
 	it('should handle errors gracefully', async () => {

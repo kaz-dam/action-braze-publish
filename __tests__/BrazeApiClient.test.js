@@ -39,7 +39,7 @@ describe('BrazeApiClient', () => {
 		const result = await brazeApiClient.getContentBlocks()
 
 		expect(httpClientMock.get).toHaveBeenCalledWith(
-			`${apiUrl}/content_blocks/list`,
+			`${apiUrl}/content_blocks/list?limit=1000`,
 			{
 				Authorization: `Bearer ${apiKey}`,
 				'Content-Type': 'application/json'
